@@ -37,7 +37,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="py-20 md:py-28 bg-background">
+    <section id="how-it-works" className="py-20 md:py-28 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
@@ -88,7 +88,7 @@ export function HowItWorks() {
             })}
           >
             <Upload className="size-5" />
-            Start Your Hairstyle Try On
+            Start AI Hair Try-On
           </Link>
         </div>
       </div>

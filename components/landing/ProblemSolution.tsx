@@ -41,13 +41,13 @@ export function ProblemSolution() {
             <div className="size-6 rounded-full bg-red-100 flex items-center justify-center">
               <X className="size-3 text-red-600" />
             </div>
-            <span className="text-sm font-semibold text-foreground uppercase tracking-wide">Before Hairstyle AI</span>
+            <span className="text-sm font-semibold text-foreground uppercase tracking-wide">Before AI Hair</span>
           </div>
           <div className="flex items-center gap-2 mb-2">
             <div className="size-6 rounded-full bg-green-100 flex items-center justify-center">
               <Check className="size-3 text-green-600" />
             </div>
-            <span className="text-sm font-semibold text-foreground uppercase tracking-wide">With Hairstyle AI</span>
+            <span className="text-sm font-semibold text-foreground uppercase tracking-wide">With AI Hair</span>
           </div>
 
           {pairs.map(({ problem, solution }) => (

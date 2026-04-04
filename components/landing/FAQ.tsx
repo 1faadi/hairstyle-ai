@@ -41,7 +41,7 @@ const faqs = [
   {
     question: "Can I use it on mobile?",
     answer:
-      "Yes! Hairstyle AI is fully mobile-optimized and works in any modern browser on iOS and Android. No app download required.",
+      "Yes! AI Hair is fully mobile-optimized and works in any modern browser on iOS and Android. No app download required.",
   },
   {
     question: "What if I don't like the results?",
@@ -62,7 +62,7 @@ export function FAQ() {
               Frequently asked questions
             </h2>
             <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              Everything you need to know about Hairstyle AI. Can&apos;t find the answer? Reach us at{" "}
+              Everything you need to know about AI Hair. Can&apos;t find the answer? Reach us at{" "}
               <a
                 href="mailto:support@hairstyleai.ai"
                 className="text-primary hover:underline"
