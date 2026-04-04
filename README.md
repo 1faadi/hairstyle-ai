@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# hairstyle-ai
 
-## Getting Started
+Next.js 16 app with a dedicated `/try-on` flow:
+- Upload target portrait.
+- Choose hairstyle from curated Cloudinary presets or upload custom source.
+- Submit to VModel AI hairstyle model.
+- Poll task status and preview/download result.
 
-First, run the development server:
+## Requirements
+
+- Node.js 20+
+- VModel API token
+- Cloudinary account (for presets and uploads)
+
+## Environment Setup
+
+1. Copy `.env.example` to `.env.local`.
+2. Fill in all variables:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+VMODEL_API_TOKEN=
+VMODEL_MODEL_VERSION=5c0440717a995b0bbd93377bd65dbb4fe360f67967c506aa6bd8f6b660733a7e
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_PRESETS_FOLDER=hairstyle-ai/presets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`CLOUDINARY_PRESETS_FOLDER` must point to the folder containing hairstyle reference images.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run Locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open `http://localhost:3000` and click any CTA, or open `http://localhost:3000/try-on` directly.
 
-To learn more about Next.js, take a look at the following resources:
+## Internal API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `GET /api/hairstyle/presets`
+- `POST /api/hairstyle/tasks`
+- `GET /api/hairstyle/tasks/[taskId]`
+- `GET /api/hairstyle/tasks/[taskId]/result`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All provider credentials stay server-side and are never exposed to the client.
