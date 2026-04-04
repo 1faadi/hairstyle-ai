@@ -10,7 +10,7 @@ Next.js 16 app with a dedicated `/try-on` flow:
 
 - Node.js 20+
 - AILab API key
-- Cloudinary account (for presets and uploads)
+- Cloudinary account (for preset thumbnails)
 
 ## Environment Setup
 

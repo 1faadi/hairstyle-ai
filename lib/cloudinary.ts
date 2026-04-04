@@ -7,6 +7,7 @@ type CloudinaryImageResource = {
   asset_id: string
   public_id: string
   secure_url: string
+  version?: number
 }
 
 export type CloudinaryPresetAsset = {
@@ -55,7 +56,7 @@ function toPresetName(publicId: string): string {
 }
 
 export async function listCloudinaryPresets(
-  limit = 100
+  limit = 500
 ): Promise<CloudinaryPresetAsset[]> {
   const client = getCloudinary()
   const folder = getPresetsFolder()
@@ -74,6 +75,7 @@ export async function listCloudinaryPresets(
     name: toPresetName(resource.public_id),
     thumbnailUrl: client.url(resource.public_id, {
       secure: true,
+      version: resource.version,
       transformation: [
         { width: 500, height: 500, crop: "fill", gravity: "auto" },
         { quality: "auto", fetch_format: "auto" },

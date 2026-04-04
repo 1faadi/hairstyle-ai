@@ -4,6 +4,7 @@ export type HairstylePreset = {
   id: string
   name: string
   hairStyle: string
+  gender: "male" | "female"
   thumbnailUrl: string
 }
 

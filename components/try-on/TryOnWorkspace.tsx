@@ -66,6 +66,8 @@ function getReadableStatus(status: HairstyleTaskStatus | null): string {
 
 export function TryOnWorkspace() {
   const [presets, setPresets] = useState<HairstylePreset[]>([])
+  const [presetGender, setPresetGender] = useState<"male" | "female">("female")
+  const [brokenPresetIds, setBrokenPresetIds] = useState<Set<string>>(new Set())
   const [presetsLoading, setPresetsLoading] = useState(true)
   const [presetsError, setPresetsError] = useState<string | null>(null)
 
@@ -86,6 +88,22 @@ export function TryOnWorkspace() {
     () => presets.find((preset) => preset.id === selectedPresetId) ?? null,
     [presets, selectedPresetId]
   )
+
+  const filteredPresets = useMemo(() => {
+    return presets.filter((preset) => preset.gender === presetGender)
+  }, [presets, presetGender])
+
+  function getFallbackThumbnail(gender: "male" | "female"): string {
+    return gender === "male" ? "/images/hairstyle-boy.jpg" : "/images/hairstyle-woman.jpg"
+  }
+
+  useEffect(() => {
+    if (filteredPresets.length === 0) return
+    const isSelectedVisible = filteredPresets.some((preset) => preset.id === selectedPresetId)
+    if (!isSelectedVisible) {
+      setSelectedPresetId(filteredPresets[0].id)
+    }
+  }, [filteredPresets, selectedPresetId])
 
   useEffect(() => {
     let canceled = false
@@ -270,14 +288,39 @@ export function TryOnWorkspace() {
                 {presetsError && (
                   <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
                 )}
+                {!presetsLoading && presets.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={presetGender === "female" ? "default" : "outline"}
+                      onClick={() => setPresetGender("female")}
+                    >
+                      Women
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={presetGender === "male" ? "default" : "outline"}
+                      onClick={() => setPresetGender("male")}
+                    >
+                      Men
+                    </Button>
+                  </div>
+                )}
                 {!presetsLoading && presets.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     No AILab presets available right now.
                   </p>
                 )}
-                {!presetsLoading && presets.length > 0 && (
+                {!presetsLoading && presets.length > 0 && filteredPresets.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No presets available for this filter.
+                  </p>
+                )}
+                {!presetsLoading && filteredPresets.length > 0 && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {presets.map((preset) => {
+                    {filteredPresets.map((preset) => {
                       const isActive = preset.id === selectedPresetId
                       return (
                         <button
@@ -292,9 +335,21 @@ export function TryOnWorkspace() {
                           )}
                         >
                           <img
-                            src={preset.thumbnailUrl}
+                            src={
+                              brokenPresetIds.has(preset.id)
+                                ? getFallbackThumbnail(preset.gender)
+                                : preset.thumbnailUrl
+                            }
                             alt={preset.name}
                             className="h-24 w-full object-cover"
+                            onError={() =>
+                              setBrokenPresetIds((current) => {
+                                if (current.has(preset.id)) return current
+                                const next = new Set(current)
+                                next.add(preset.id)
+                                return next
+                              })
+                            }
                           />
                           <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
                         </button>
