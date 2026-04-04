@@ -10,7 +10,7 @@ const steps = [
     icon: Upload,
     title: "Upload Your Photo",
     description:
-      "Take or upload a clear front-facing photo. Supports JPEG, PNG, and WebP up to 10MB.",
+      "Take or upload a clear front-facing photo. Supports JPEG and PNG up to 5MB.",
   },
   {
     step: "02",

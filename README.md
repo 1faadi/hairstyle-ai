@@ -2,14 +2,14 @@
 
 Next.js 16 app with a dedicated `/try-on` flow:
 - Upload target portrait.
-- Choose hairstyle from curated Cloudinary presets or upload custom source.
-- Submit to VModel AI hairstyle model.
+- Choose hairstyle from curated Cloudinary-backed AILab presets.
+- Submit to AILab `hairstyle-editor-pro`.
 - Poll task status and preview/download result.
 
 ## Requirements
 
 - Node.js 20+
-- VModel API token
+- AILab API key
 - Cloudinary account (for presets and uploads)
 
 ## Environment Setup
@@ -18,8 +18,7 @@ Next.js 16 app with a dedicated `/try-on` flow:
 2. Fill in all variables:
 
 ```bash
-VMODEL_API_TOKEN=
-VMODEL_MODEL_VERSION=5c0440717a995b0bbd93377bd65dbb4fe360f67967c506aa6bd8f6b660733a7e
+AILABAPI_API_KEY=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=

@@ -3,8 +3,8 @@ import type { HairstyleTaskStatus } from "@/lib/hairstyle/constants"
 export type HairstylePreset = {
   id: string
   name: string
+  hairStyle: string
   thumbnailUrl: string
-  sourceUrl: string
 }
 
 export type TaskResponse = {

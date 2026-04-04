@@ -2,12 +2,19 @@ import { randomUUID } from "node:crypto"
 import { v2 as cloudinary } from "cloudinary"
 
 import { HttpError } from "@/lib/hairstyle/errors"
-import type { HairstylePreset } from "@/lib/hairstyle/types"
 
 type CloudinaryImageResource = {
   asset_id: string
   public_id: string
   secure_url: string
+}
+
+export type CloudinaryPresetAsset = {
+  id: string
+  publicId: string
+  name: string
+  thumbnailUrl: string
+  sourceUrl: string
 }
 
 let isConfigured = false
@@ -47,7 +54,9 @@ function toPresetName(publicId: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-export async function listCloudinaryPresets(limit = 50): Promise<HairstylePreset[]> {
+export async function listCloudinaryPresets(
+  limit = 100
+): Promise<CloudinaryPresetAsset[]> {
   const client = getCloudinary()
   const folder = getPresetsFolder()
 
@@ -61,6 +70,7 @@ export async function listCloudinaryPresets(limit = 50): Promise<HairstylePreset
 
   return resources.map((resource) => ({
     id: resource.asset_id || resource.public_id,
+    publicId: resource.public_id,
     name: toPresetName(resource.public_id),
     thumbnailUrl: client.url(resource.public_id, {
       secure: true,

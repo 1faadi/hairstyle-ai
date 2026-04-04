@@ -1,6 +1,6 @@
 import { HttpError } from "@/lib/hairstyle/errors"
 import { createErrorResponse } from "@/lib/hairstyle/http"
-import { getVModelTask, getVModelApiToken } from "@/lib/vmodel"
+import { getAILabTask } from "@/lib/ailab"
 
 export const runtime = "nodejs"
 
@@ -18,7 +18,7 @@ function getExtensionFromContentType(contentType: string): string {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { taskId } = await context.params
-    const task = await getVModelTask(taskId)
+    const task = await getAILabTask(taskId)
 
     if (task.status !== "succeeded") {
       throw new HttpError(409, "Task is not ready yet")
@@ -28,12 +28,7 @@ export async function GET(request: Request, context: RouteContext) {
       throw new HttpError(502, "Task succeeded but no output URL was returned")
     }
 
-    const providerResponse = await fetch(task.outputUrl, {
-      headers: {
-        Authorization: `Bearer ${getVModelApiToken()}`,
-      },
-      cache: "no-store",
-    })
+    const providerResponse = await fetch(task.outputUrl, { cache: "no-store" })
 
     if (!providerResponse.ok || !providerResponse.body) {
       throw new HttpError(
@@ -42,7 +37,7 @@ export async function GET(request: Request, context: RouteContext) {
       )
     }
 
-    const contentType = providerResponse.headers.get("content-type") ?? "image/webp"
+    const contentType = providerResponse.headers.get("content-type") ?? "image/png"
     const extension = getExtensionFromContentType(contentType)
     const shouldDownload = new URL(request.url).searchParams.get("download") === "1"
 

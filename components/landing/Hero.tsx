@@ -51,7 +51,7 @@ export function Hero() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            JPG, PNG, WEBP up to 10MB. Results usually in under 10 seconds.
+            JPG and PNG up to 5MB. Results usually in under 10 seconds.
           </p>
         </div>
 

@@ -50,9 +50,9 @@ function createObjectPreview(file: File | null) {
 function getReadableStatus(status: HairstyleTaskStatus | null): string {
   switch (status) {
     case "starting":
-      return "Starting generation..."
+      return "Queued..."
     case "processing":
-      return "Applying hairstyle..."
+      return "Applying selected style..."
     case "succeeded":
       return "Generation complete."
     case "failed":
@@ -69,13 +69,10 @@ export function TryOnWorkspace() {
   const [presetsLoading, setPresetsLoading] = useState(true)
   const [presetsError, setPresetsError] = useState<string | null>(null)
 
-  const [sourceMode, setSourceMode] = useState<"preset" | "custom">("preset")
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
+  const [selectedColor, setSelectedColor] = useState("")
   const [targetFile, setTargetFile] = useState<File | null>(null)
-  const [sourceFile, setSourceFile] = useState<File | null>(null)
-
   const [targetPreview, setTargetPreview] = useState<string | null>(null)
-  const [sourcePreview, setSourcePreview] = useState<string | null>(null)
 
   const [taskId, setTaskId] = useState<string | null>(null)
   const [taskStatus, setTaskStatus] = useState<HairstyleTaskStatus | null>(null)
@@ -107,13 +104,8 @@ export function TryOnWorkspace() {
         const nextPresets = Array.isArray(data.presets) ? data.presets : []
 
         if (canceled) return
-
         setPresets(nextPresets)
         setSelectedPresetId(nextPresets[0]?.id ?? null)
-
-        if (nextPresets.length === 0) {
-          setSourceMode("custom")
-        }
       } catch (error) {
         if (canceled) return
         const message =
@@ -125,7 +117,6 @@ export function TryOnWorkspace() {
     }
 
     void loadPresets()
-
     return () => {
       canceled = true
     }
@@ -139,15 +130,6 @@ export function TryOnWorkspace() {
       if (preview) URL.revokeObjectURL(preview)
     }
   }, [targetFile])
-
-  useEffect(() => {
-    const preview = createObjectPreview(sourceFile)
-    setSourcePreview(preview)
-
-    return () => {
-      if (preview) URL.revokeObjectURL(preview)
-    }
-  }, [sourceFile])
 
   useEffect(() => {
     return () => {
@@ -168,7 +150,6 @@ export function TryOnWorkspace() {
       }
 
       const data = (await response.json()) as TaskStatusResponse
-
       if (pollTokenRef.current !== token) return
 
       setTaskStatus(data.status)
@@ -180,7 +161,7 @@ export function TryOnWorkspace() {
       }
 
       if (data.status === "failed" || data.status === "canceled") {
-        setErrorMessage(data.error || "Generation failed. Please try another image.")
+        setErrorMessage(data.error || "Generation failed. Please try another style.")
         return
       }
 
@@ -196,13 +177,8 @@ export function TryOnWorkspace() {
       return
     }
 
-    if (sourceMode === "preset" && !selectedPreset) {
+    if (!selectedPreset) {
       setErrorMessage("Please choose a hairstyle preset.")
-      return
-    }
-
-    if (sourceMode === "custom" && !sourceFile) {
-      setErrorMessage("Please upload a hairstyle reference image.")
       return
     }
 
@@ -218,11 +194,10 @@ export function TryOnWorkspace() {
     try {
       const formData = new FormData()
       formData.append("targetImage", targetFile)
-
-      if (sourceMode === "preset" && selectedPreset) {
-        formData.append("sourcePresetUrl", selectedPreset.sourceUrl)
-      } else if (sourceMode === "custom" && sourceFile) {
-        formData.append("sourceImage", sourceFile)
+      formData.append("hairStyle", selectedPreset.hairStyle)
+      formData.append("imageSize", "1")
+      if (selectedColor.trim()) {
+        formData.append("color", selectedColor.trim())
       }
 
       const response = await fetch("/api/hairstyle/tasks", {
@@ -268,7 +243,7 @@ export function TryOnWorkspace() {
             Back to Home
           </Link>
 
-          <p className="text-xs text-muted-foreground">Supported: JPG, PNG, WEBP up to 10MB</p>
+          <p className="text-xs text-muted-foreground">Supported: JPG and PNG up to 5MB</p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -281,87 +256,63 @@ export function TryOnWorkspace() {
                 <h2 className="text-sm font-semibold">1. Upload Your Photo</h2>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png"
                   onChange={(event) => setTargetFile(event.target.files?.[0] ?? null)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold">2. Choose Hairstyle Source</h2>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant={sourceMode === "preset" ? "default" : "outline"}
-                    size="sm"
-                    disabled={presets.length === 0}
-                    onClick={() => setSourceMode("preset")}
-                  >
-                    Preset Gallery
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={sourceMode === "custom" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSourceMode("custom")}
-                  >
-                    Custom Upload
-                  </Button>
-                </div>
-
-                {sourceMode === "preset" && (
-                  <div className="space-y-2">
-                    {presetsLoading && (
-                      <p className="text-sm text-muted-foreground">Loading presets...</p>
-                    )}
-                    {presetsError && (
-                      <p className="text-sm text-destructive">
-                        Could not load presets: {presetsError}
-                      </p>
-                    )}
-                    {!presetsLoading && presets.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        No curated presets found. Switch to Custom Upload to continue.
-                      </p>
-                    )}
-                    {!presetsLoading && presets.length > 0 && (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {presets.map((preset) => {
-                          const isActive = preset.id === selectedPresetId
-                          return (
-                            <button
-                              key={preset.id}
-                              type="button"
-                              onClick={() => setSelectedPresetId(preset.id)}
-                              className={cn(
-                                "overflow-hidden rounded-lg border text-left transition-colors",
-                                isActive
-                                  ? "border-primary ring-2 ring-primary/30"
-                                  : "border-border hover:border-primary/40"
-                              )}
-                            >
-                              <img
-                                src={preset.thumbnailUrl}
-                                alt={preset.name}
-                                className="h-24 w-full object-cover"
-                              />
-                              <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
+                <h2 className="text-sm font-semibold">2. Choose a Style Preset</h2>
+                {presetsLoading && (
+                  <p className="text-sm text-muted-foreground">Loading presets...</p>
+                )}
+                {presetsError && (
+                  <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
+                )}
+                {!presetsLoading && presets.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No AILab presets available right now.
+                  </p>
+                )}
+                {!presetsLoading && presets.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {presets.map((preset) => {
+                      const isActive = preset.id === selectedPresetId
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setSelectedPresetId(preset.id)}
+                          className={cn(
+                            "overflow-hidden rounded-lg border text-left transition-colors",
+                            isActive
+                              ? "border-primary ring-2 ring-primary/30"
+                              : "border-border hover:border-primary/40"
+                          )}
+                        >
+                          <img
+                            src={preset.thumbnailUrl}
+                            alt={preset.name}
+                            className="h-24 w-full object-cover"
+                          />
+                          <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
+              </section>
 
-                {sourceMode === "custom" && (
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(event) => setSourceFile(event.target.files?.[0] ?? null)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  />
-                )}
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold">3. Optional Hair Color</h2>
+                <input
+                  type="text"
+                  value={selectedColor}
+                  onChange={(event) => setSelectedColor(event.target.value)}
+                  placeholder="e.g. auburn, dark brown, blonde"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
               </section>
 
               <section className="space-y-3">
@@ -452,19 +403,6 @@ export function TryOnWorkspace() {
                   </div>
                 </div>
               </div>
-
-              {sourceMode === "custom" && sourcePreview && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Custom Hairstyle Reference</p>
-                  <div className="max-w-[200px] overflow-hidden rounded-lg border border-border">
-                    <img
-                      src={sourcePreview}
-                      alt="Custom hairstyle reference"
-                      className="h-32 w-full object-cover"
-                    />
-                  </div>
-                </div>
-              )}
 
               {resultUrl && (
                 <a

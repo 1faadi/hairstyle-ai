@@ -1,5 +1,5 @@
 import { createErrorResponse } from "@/lib/hairstyle/http"
-import { getVModelTask } from "@/lib/vmodel"
+import { getAILabTask } from "@/lib/ailab"
 
 export const runtime = "nodejs"
 
@@ -10,7 +10,7 @@ type RouteContext = {
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { taskId } = await context.params
-    const task = await getVModelTask(taskId)
+    const task = await getAILabTask(taskId)
 
     return Response.json({
       taskId: task.taskId,

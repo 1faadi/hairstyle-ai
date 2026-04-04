@@ -23,7 +23,7 @@ export function validateImageFile(
   if (!ALLOWED_IMAGE_MIME_TYPES.has(entry.type)) {
     throw new HttpError(
       400,
-      `${fieldName} has unsupported type. Allowed: jpg, png, webp`
+      `${fieldName} has unsupported type. Allowed: jpg, jpeg, png`
     )
   }
 
