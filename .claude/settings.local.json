@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx skillfish:*)",
+      "WebFetch(domain:hairstyleai.ai)",
+      "Read(//c/Users/Fahad/.claude/skills/clone-website/references/**)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npx shadcn@latest init --yes --defaults)"
+    ]
+  }
+}
