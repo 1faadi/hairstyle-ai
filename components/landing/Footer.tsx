@@ -10,6 +10,7 @@ const socialLinks = [
 
 const productLinks = [
   { label: "AI Hair", href: "#features" },
+  { label: "AI Nail Art", href: "/nail-art" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Try On", href: "/try-on" },
   { label: "Pricing", href: "#pricing" },

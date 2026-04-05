@@ -1,8 +1,7 @@
+import { getAILabTask } from "@/lib/ailab"
 import { HttpError } from "@/lib/hairstyle/errors"
 import { createErrorResponse } from "@/lib/hairstyle/http"
 import { parseProviderTaskId } from "@/lib/hairstyle/provider-task"
-import { getAILabTask } from "@/lib/ailab"
-import { getVModelAuthHeader, getVModelTask } from "@/lib/vmodel"
 
 export const runtime = "nodejs"
 
@@ -21,14 +20,11 @@ export async function GET(request: Request, context: RouteContext) {
   try {
     const { taskId: scopedTaskId } = await context.params
     const parsed = parseProviderTaskId(scopedTaskId)
-    if (parsed.feature !== "hair") {
-      throw new HttpError(400, "Invalid hairstyle task id")
+    if (parsed.feature !== "nail" || parsed.provider !== "ailab") {
+      throw new HttpError(400, "Invalid nail art task id")
     }
 
-    const task =
-      parsed.provider === "vmodel"
-        ? await getVModelTask(parsed.taskId)
-        : await getAILabTask(parsed.taskId)
+    const task = await getAILabTask(parsed.taskId)
 
     if (task.status !== "succeeded") {
       throw new HttpError(409, "Task is not ready yet")
@@ -40,10 +36,6 @@ export async function GET(request: Request, context: RouteContext) {
 
     const providerResponse = await fetch(task.outputUrl, {
       cache: "no-store",
-      headers:
-        parsed.provider === "vmodel"
-          ? { Authorization: getVModelAuthHeader() }
-          : undefined,
     })
 
     if (!providerResponse.ok || !providerResponse.body) {
@@ -62,7 +54,7 @@ export async function GET(request: Request, context: RouteContext) {
     headers.set("Cache-Control", "no-store")
     headers.set(
       "Content-Disposition",
-      `${shouldDownload ? "attachment" : "inline"}; filename="hairstyle-${parsed.taskId}.${extension}"`
+      `${shouldDownload ? "attachment" : "inline"}; filename="nail-art-${parsed.taskId}.${extension}"`
     )
 
     return new Response(providerResponse.body, {

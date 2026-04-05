@@ -39,6 +39,16 @@ export function Hero() {
               Try AI Hair
             </Link>
             <Link
+              href="/nail-art"
+              className={cn(
+                buttonVariants({ size: "lg", variant: "outline" }),
+                "h-12 gap-2 px-6 text-base"
+              )}
+            >
+              <Sparkles className="size-5" />
+              Try AI Nail Art
+            </Link>
+            <Link
               href="#features"
               className={cn(
                 buttonVariants({ size: "lg", variant: "outline" }),

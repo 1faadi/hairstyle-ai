@@ -5,8 +5,9 @@ Next.js 16 app with a dedicated `/try-on` flow:
 - Choose hairstyle from curated Cloudinary-backed AILab presets, or upload a custom hairstyle reference.
 - Submit preset jobs to AILab `hairstyle-editor-pro`.
 - Submit custom reference jobs to VModel `ai-hairstyle`.
+- Dedicated `/nail-art` flow using AILab `ai-nail-art-pro` with source + reference images.
 - Supabase email/password auth.
-- Guest quota enforcement (3 successful generations per IP, lifetime).
+- Guest quota enforcement (3 successful generations per IP, shared across AI Hair + AI Nail Art).
 - Poll task status and preview/download result.
 
 ## Requirements
@@ -45,9 +46,10 @@ CLOUDINARY_UPLOADS_FOLDER=hairstyle-ai/uploads
 
 ## Supabase Migration
 
-Run the SQL migration in:
+Run SQL migrations in:
 
 - `supabase/migrations/20260405_guest_ip_quota.sql`
+- `supabase/migrations/20260405211218_fix_consume_guest_credit_ambiguous_column.sql`
 
 This creates:
 
@@ -75,5 +77,17 @@ Open `http://localhost:3000` and click any CTA, or open `http://localhost:3000/t
 - `POST /api/hairstyle/tasks`
 - `GET /api/hairstyle/tasks/[taskId]`
 - `GET /api/hairstyle/tasks/[taskId]/result`
+- `GET /api/nail-art/quota`
+- `POST /api/nail-art/tasks`
+- `GET /api/nail-art/tasks/[taskId]`
+- `GET /api/nail-art/tasks/[taskId]/result`
+
+Nail Art `POST /api/nail-art/tasks` expects:
+- `targetImage` (required file, JPG/JPEG/PNG/WEBP, max 10MB)
+- `referenceImage` (required file, JPG/JPEG/PNG/WEBP, max 10MB)
+- `resolution` (optional: `1K` or `2K`, default `1K`)
+
+Task IDs now use `feature:provider:providerTaskId` (for example `hair:ailab:...`, `nail:ailab:...`).
+Legacy `provider:taskId` IDs are still accepted for older Hair jobs.
 
 All provider credentials stay server-side and are never exposed to the client.

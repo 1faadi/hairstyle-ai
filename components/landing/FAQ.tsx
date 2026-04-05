@@ -26,7 +26,7 @@ const faqs = [
   {
     question: "Can I try multiple hairstyles?",
     answer:
-      "Yes. Guests can try up to 3 generations total per IP address. Sign in to continue with unlimited try-ons.",
+      "Yes. Guests can try up to 3 generations total per IP address, shared across AI Hair and AI Nail Art. Sign in to continue with unlimited try-ons.",
   },
   {
     question: "Do you offer styles for men and women?",
@@ -36,7 +36,7 @@ const faqs = [
   {
     question: "How much does it cost?",
     answer:
-      "You can start free with 3 guest tries per IP. Create an account to remove the guest limit.",
+      "You can start free with 3 guest tries per IP (shared across AI Hair + AI Nail Art). Create an account to remove the guest limit.",
   },
   {
     question: "Can I use it on mobile?",

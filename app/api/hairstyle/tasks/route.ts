@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         sourceUrl,
         targetUrl,
       })
-      const scopedTaskId = toProviderTaskId("vmodel", task.taskId)
+      const scopedTaskId = toProviderTaskId("hair", "vmodel", task.taskId)
 
       await createGenerationJobRecord({
         taskId: scopedTaskId,
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       color,
       imageSize,
     })
-    const scopedTaskId = toProviderTaskId("ailab", task.taskId)
+    const scopedTaskId = toProviderTaskId("hair", "ailab", task.taskId)
 
     await createGenerationJobRecord({
       taskId: scopedTaskId,

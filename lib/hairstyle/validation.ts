@@ -1,9 +1,21 @@
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/hairstyle/constants"
 import { HttpError } from "@/lib/hairstyle/errors"
 
-export function validateImageFile(
+const NAIL_ART_ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+])
+const NAIL_ART_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+function validateImageFileWithOptions(
   entry: FormDataEntryValue | null,
-  fieldName: string
+  fieldName: string,
+  options: {
+    maxUploadBytes: number
+    allowedMimeTypes: Set<string>
+    allowedTypesLabel: string
+  }
 ): File {
   if (!(entry instanceof File)) {
     throw new HttpError(400, `Missing required file: ${fieldName}`)
@@ -13,21 +25,43 @@ export function validateImageFile(
     throw new HttpError(400, `${fieldName} is empty`)
   }
 
-  if (entry.size > MAX_UPLOAD_BYTES) {
+  if (entry.size > options.maxUploadBytes) {
     throw new HttpError(
       400,
-      `${fieldName} is too large. Max size is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB`
+      `${fieldName} is too large. Max size is ${Math.floor(options.maxUploadBytes / (1024 * 1024))}MB`
     )
   }
 
-  if (!ALLOWED_IMAGE_MIME_TYPES.has(entry.type)) {
+  if (!options.allowedMimeTypes.has(entry.type)) {
     throw new HttpError(
       400,
-      `${fieldName} has unsupported type. Allowed: jpg, jpeg, png`
+      `${fieldName} has unsupported type. Allowed: ${options.allowedTypesLabel}`
     )
   }
 
   return entry
+}
+
+export function validateImageFile(
+  entry: FormDataEntryValue | null,
+  fieldName: string
+): File {
+  return validateImageFileWithOptions(entry, fieldName, {
+    maxUploadBytes: MAX_UPLOAD_BYTES,
+    allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES,
+    allowedTypesLabel: "jpg, jpeg, png",
+  })
+}
+
+export function validateNailArtImageFile(
+  entry: FormDataEntryValue | null,
+  fieldName: string
+): File {
+  return validateImageFileWithOptions(entry, fieldName, {
+    maxUploadBytes: NAIL_ART_MAX_UPLOAD_BYTES,
+    allowedMimeTypes: NAIL_ART_ALLOWED_IMAGE_MIME_TYPES,
+    allowedTypesLabel: "jpg, jpeg, png, webp",
+  })
 }
 
 export function getOptionalString(entry: FormDataEntryValue | null): string | null {

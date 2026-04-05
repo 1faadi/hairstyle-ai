@@ -1,6 +1,7 @@
 import {
   AILAB_CREATE_TASK_URL,
   AILAB_GET_TASK_URL,
+  AILAB_NAIL_ART_CREATE_TASK_URL,
   type HairstyleTaskStatus,
 } from "@/lib/hairstyle/constants"
 import { HttpError } from "@/lib/hairstyle/errors"
@@ -91,6 +92,46 @@ export async function createAILabHairstyleTask(input: {
   if (data.error_code !== 0 || !data.task_id) {
     throw new Error(
       `AILab create task response was invalid: ${data.error_msg || JSON.stringify(data)}`
+    )
+  }
+
+  return { taskId: data.task_id, status: "starting" }
+}
+
+export async function createAILabNailArtTask(input: {
+  image: File
+  referenceImage: File
+  resolution?: "1K" | "2K"
+}): Promise<{ taskId: string; status: HairstyleTaskStatus }> {
+  const formData = new FormData()
+  formData.append("task_type", "async")
+  formData.append("image", input.image, input.image.name || "hand.jpg")
+  formData.append(
+    "reference_image",
+    input.referenceImage,
+    input.referenceImage.name || "reference.jpg"
+  )
+  formData.append("resolution", input.resolution || "1K")
+
+  const response = await fetch(AILAB_NAIL_ART_CREATE_TASK_URL, {
+    method: "POST",
+    headers: {
+      "ailabapi-api-key": getAILabApiKey(),
+    },
+    body: formData,
+  })
+
+  const data = await parseJsonOrThrow<AILabCreateTaskResponse>(response)
+
+  if (!response.ok) {
+    throw new Error(
+      `AILab nail art create task request failed (${response.status}): ${JSON.stringify(data)}`
+    )
+  }
+
+  if (data.error_code !== 0 || !data.task_id) {
+    throw new Error(
+      `AILab nail art create task response was invalid: ${data.error_msg || JSON.stringify(data)}`
     )
   }
 

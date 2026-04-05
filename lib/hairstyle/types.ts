@@ -8,7 +8,7 @@ export type HairstylePreset = {
   name: string
   hairStyle: string
   gender: "male" | "female"
-  thumbnailUrl: string
+  thumbnailUrl: string | null
 }
 
 export type QuotaSnapshot = {

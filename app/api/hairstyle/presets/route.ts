@@ -4,10 +4,6 @@ import { createErrorResponse } from "@/lib/hairstyle/http"
 
 export const runtime = "nodejs"
 
-function resolveFallbackThumbnail(gender: "male" | "female"): string {
-  return gender === "male" ? "/images/hairstyle-boy.jpg" : "/images/hairstyle-woman.jpg"
-}
-
 export async function GET() {
   try {
     const assets = await listCloudinaryPresets(500)
@@ -25,7 +21,7 @@ export async function GET() {
       name: item.name,
       hairStyle: item.hairStyle,
       gender: item.gender,
-      thumbnailUrl: assetBySlug.get(item.thumbnailSlug) ?? resolveFallbackThumbnail(item.gender),
+      thumbnailUrl: assetBySlug.get(item.thumbnailSlug) ?? null,
     }))
 
     return Response.json({ presets })

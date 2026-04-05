@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   AlertCircle,
@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Lock,
+  Loader2,
   Mail,
   Scissors,
   Sparkles,
@@ -22,7 +23,9 @@ type AuthMode = "signin" | "signup"
 export function AuthForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get("next") || "/try-on"
+  const nextParam = searchParams.get("next")
+  const redirectTo =
+    nextParam && nextParam.startsWith("/") ? nextParam : "/"
 
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin"
   const [mode, setMode] = useState<AuthMode>(initialMode)
@@ -37,6 +40,35 @@ export function AuthForm() {
   const [error, setError] = useState<string | null>(null)
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
+
+  function buildPostAuthRedirect(kind: "signin" | "signup"): string {
+    const basePath = kind === "signup" ? "/" : redirectTo
+
+    try {
+      const url = new URL(basePath, window.location.origin)
+      url.searchParams.set("welcome", kind)
+      return `${url.pathname}${url.search}${url.hash}`
+    } catch {
+      return `${basePath}${basePath.includes("?") ? "&" : "?"}welcome=${kind}`
+    }
+  }
+
+  useEffect(() => {
+    if (!supabase) return
+
+    let canceled = false
+    supabase.auth.getSession().then(({ data }) => {
+      if (canceled) return
+      if (data.session?.user) {
+        router.replace(buildPostAuthRedirect("signin"))
+      }
+    })
+
+    return () => {
+      canceled = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, router])
 
   function switchMode(next: AuthMode) {
     if (next === mode) return
@@ -79,7 +111,7 @@ export function AuthForm() {
           setError(err.message)
           return
         }
-        router.push(redirectTo)
+        router.push(buildPostAuthRedirect("signin"))
         router.refresh()
         return
       }
@@ -99,11 +131,20 @@ export function AuthForm() {
         return
       }
       if (data.session) {
-        router.push(redirectTo)
+        router.push(buildPostAuthRedirect("signup"))
         router.refresh()
         return
       }
-      setMessage("Check your email to confirm your account before signing in.")
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+      if (signInError) {
+        setError(signInError.message)
+        return
+      }
+      router.push(buildPostAuthRedirect("signup"))
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed")
     } finally {
@@ -642,13 +683,23 @@ export function AuthForm() {
                   }
                 }}
               >
-                {isSubmitting
-                  ? mode === "signin"
-                    ? "Signing in..."
-                    : "Creating account..."
-                  : mode === "signin"
-                    ? "Sign In"
-                    : "Create Account"}
+                {isSubmitting ? (
+                  <span className="auth-loading-wrap">
+                    <Loader2 size={16} className="auth-spin" />
+                    <span className="auth-loading-text">
+                      {mode === "signin" ? "Signing you in" : "Creating your account"}
+                    </span>
+                    <span className="auth-loading-dots" aria-hidden>
+                      <span>.</span>
+                      <span>.</span>
+                      <span>.</span>
+                    </span>
+                  </span>
+                ) : mode === "signin" ? (
+                  "Sign In"
+                ) : (
+                  "Create Account"
+                )}
               </button>
             </form>
 
@@ -704,6 +755,33 @@ export function AuthForm() {
         #auth-confirm-password:focus {
           border-color: oklch(0.61 0.18 244);
           box-shadow: 0 0 0 3px oklch(0.61 0.18 244 / 0.15);
+        }
+        .auth-loading-wrap {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .auth-spin {
+          animation: auth-spin 0.9s linear infinite;
+        }
+        .auth-loading-dots span {
+          animation: auth-dot 1.2s ease-in-out infinite;
+          display: inline-block;
+        }
+        .auth-loading-dots span:nth-child(2) {
+          animation-delay: 0.15s;
+        }
+        .auth-loading-dots span:nth-child(3) {
+          animation-delay: 0.3s;
+        }
+        @keyframes auth-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes auth-dot {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+          40% { transform: translateY(-2px); opacity: 1; }
         }
       `}</style>
     </div>

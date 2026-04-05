@@ -23,10 +23,19 @@ import type {
   TaskResponse,
   TaskStatusResponse,
 } from "@/lib/hairstyle/types"
+import { AILAB_PRESET_CATALOG } from "@/lib/hairstyle/ailab-presets"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
 const POLL_INTERVAL_MS = 2500
 const MAX_POLL_ATTEMPTS = 72
+
+const LOCAL_PRESET_SHELLS: HairstylePreset[] = AILAB_PRESET_CATALOG.map((item) => ({
+  id: item.id,
+  name: item.name,
+  hairStyle: item.hairStyle,
+  gender: item.gender,
+  thumbnailUrl: null,
+}))
 
 type HairColorOption = {
   value: string
@@ -111,17 +120,18 @@ export function TryOnWorkspace() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [quota, setQuota] = useState<QuotaSnapshot | null>(null)
-  const [userName, setUserName] = useState<string | null>(null)
-  const [showWelcomeCard, setShowWelcomeCard] = useState(false)
 
-  const [presets, setPresets] = useState<HairstylePreset[]>([])
+  const [presets, setPresets] = useState<HairstylePreset[]>(LOCAL_PRESET_SHELLS)
   const [presetGender, setPresetGender] = useState<"male" | "female">("female")
+  const [loadedPresetIds, setLoadedPresetIds] = useState<Set<string>>(new Set())
   const [brokenPresetIds, setBrokenPresetIds] = useState<Set<string>>(new Set())
   const [presetsLoading, setPresetsLoading] = useState(true)
   const [presetsError, setPresetsError] = useState<string | null>(null)
 
   const [styleMode, setStyleMode] = useState<"preset" | "custom">("preset")
-  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
+    LOCAL_PRESET_SHELLS[0]?.id ?? null
+  )
   const [customSourceFile, setCustomSourceFile] = useState<File | null>(null)
   const [customSourcePreview, setCustomSourcePreview] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState("")
@@ -136,41 +146,20 @@ export function TryOnWorkspace() {
 
   const pollTokenRef = useRef(0)
 
-  function getDisplayNameFromSession(session: { user?: { email?: string | null; user_metadata?: Record<string, unknown> } } | null): string | null {
-    const metadata = session?.user?.user_metadata
-    const name =
-      (typeof metadata?.name === "string" && metadata.name.trim()) ||
-      (typeof metadata?.full_name === "string" && metadata.full_name.trim()) ||
-      (session?.user?.email?.split("@")[0] ?? null)
-    return name
-  }
-
   // Sync Supabase session token so API calls can authenticate the user
   useEffect(() => {
     if (!supabase) return
 
     supabase.auth.getSession().then(({ data }) => {
       setAccessToken(data.session?.access_token ?? null)
-      setUserName(getDisplayNameFromSession(data.session))
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setAccessToken(session?.access_token ?? null)
-      setUserName(getDisplayNameFromSession(session))
     })
 
     return () => listener.subscription.unsubscribe()
   }, [supabase])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const params = new URLSearchParams(window.location.search)
-    if (params.get("welcome") !== "1") return
-    if (!accessToken) return
-    setShowWelcomeCard(true)
-    const timer = setTimeout(() => setShowWelcomeCard(false), 6000)
-    return () => clearTimeout(timer)
-  }, [accessToken])
 
   function authHeaders(): HeadersInit {
     if (!accessToken) return {}
@@ -199,10 +188,6 @@ export function TryOnWorkspace() {
     return presets.filter((preset) => preset.gender === presetGender)
   }, [presets, presetGender])
 
-  function getFallbackThumbnail(gender: "male" | "female"): string {
-    return gender === "male" ? "/images/hairstyle-boy.jpg" : "/images/hairstyle-woman.jpg"
-  }
-
   useEffect(() => {
     if (filteredPresets.length === 0) return
     const isSelectedVisible = filteredPresets.some((preset) => preset.id === selectedPresetId)
@@ -229,7 +214,14 @@ export function TryOnWorkspace() {
 
         if (canceled) return
         setPresets(nextPresets)
-        setSelectedPresetId(nextPresets[0]?.id ?? null)
+        setLoadedPresetIds(new Set())
+        setBrokenPresetIds(new Set())
+        setSelectedPresetId((current) => {
+          if (current && nextPresets.some((preset) => preset.id === current)) {
+            return current
+          }
+          return nextPresets[0]?.id ?? null
+        })
       } catch (error) {
         if (canceled) return
         const message =
@@ -356,7 +348,9 @@ export function TryOnWorkspace() {
           requiresAuth?: boolean
         }
         if (body.requiresAuth) {
-          setErrorMessage("You've used all 3 guest credits. Sign in for unlimited generations.")
+          setErrorMessage(
+            "You've used all 3 shared guest credits (AI Hair + AI Nail Art). Sign in for unlimited generations."
+          )
           return
         }
         throw new Error(body.error || `Request failed (${response.status})`)
@@ -384,15 +378,6 @@ export function TryOnWorkspace() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/10 to-background">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        {showWelcomeCard && (
-          <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
-            <p className="text-sm font-semibold">
-              Welcome{userName ? `, ${userName}` : ""}! Your account is ready.
-            </p>
-            <p className="text-xs text-primary/90">You now have unlimited try-ons while signed in.</p>
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <Link
             href="/"
@@ -411,8 +396,9 @@ export function TryOnWorkspace() {
             <p className="text-xs font-medium text-foreground">
               {quota?.mode === "user"
                 ? "Credits: Unlimited"
-                : `Free credits left: ${quota?.remaining ?? "--"}/3`}
+                : `Free credits left (shared): ${quota?.remaining ?? "--"}/3`}
             </p>
+            <p className="text-[11px] text-muted-foreground">Shared across AI Hair + AI Nail Art</p>
           </div>
         </div>
 
@@ -458,7 +444,7 @@ export function TryOnWorkspace() {
                 {presetsError && (
                   <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
                 )}
-                {styleMode === "preset" && !presetsLoading && presets.length > 0 && (
+                {styleMode === "preset" && presets.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -488,10 +474,16 @@ export function TryOnWorkspace() {
                     No presets available for this filter.
                   </p>
                 )}
-                {styleMode === "preset" && !presetsLoading && filteredPresets.length > 0 && (
+                {styleMode === "preset" && filteredPresets.length > 0 && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {filteredPresets.map((preset) => {
                       const isActive = preset.id === selectedPresetId
+                      const hasThumbnail =
+                        typeof preset.thumbnailUrl === "string" &&
+                        preset.thumbnailUrl.length > 0 &&
+                        !brokenPresetIds.has(preset.id)
+                      const isThumbnailLoaded = loadedPresetIds.has(preset.id)
+                      const showInlineLoader = hasThumbnail && !isThumbnailLoaded
                       return (
                         <button
                           key={preset.id}
@@ -504,23 +496,43 @@ export function TryOnWorkspace() {
                               : "border-border hover:border-primary/40"
                           )}
                         >
-                          <img
-                            src={
-                              brokenPresetIds.has(preset.id)
-                                ? getFallbackThumbnail(preset.gender)
-                                : preset.thumbnailUrl
-                            }
-                            alt={preset.name}
-                            className="h-24 w-full object-cover"
-                            onError={() =>
-                              setBrokenPresetIds((current) => {
-                                if (current.has(preset.id)) return current
-                                const next = new Set(current)
-                                next.add(preset.id)
-                                return next
-                              })
-                            }
-                          />
+                          <div className="relative h-24 w-full bg-secondary/35">
+                            {hasThumbnail ? (
+                              <img
+                                src={preset.thumbnailUrl as string}
+                                alt={preset.name}
+                                className={cn(
+                                  "h-24 w-full object-cover transition-opacity duration-200",
+                                  isThumbnailLoaded ? "opacity-100" : "opacity-0"
+                                )}
+                                onLoad={() =>
+                                  setLoadedPresetIds((current) => {
+                                    if (current.has(preset.id)) return current
+                                    const next = new Set(current)
+                                    next.add(preset.id)
+                                    return next
+                                  })
+                                }
+                                onError={() =>
+                                  setBrokenPresetIds((current) => {
+                                    if (current.has(preset.id)) return current
+                                    const next = new Set(current)
+                                    next.add(preset.id)
+                                    return next
+                                  })
+                                }
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
+                                {presetsLoading ? "Loading..." : "No preview"}
+                              </div>
+                            )}
+                            {showInlineLoader && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/45">
+                                <Loader2 className="size-4 animate-spin text-primary" />
+                              </div>
+                            )}
+                          </div>
                           <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
                         </button>
                       )
@@ -620,16 +632,16 @@ export function TryOnWorkspace() {
                           <Link href="/auth?next=/try-on" className="font-semibold underline underline-offset-2">
                             Sign in
                           </Link>{" "}
-                          for unlimited generations.
+                          for unlimited generations across AI Hair + AI Nail Art.
                         </span>
                       </p>
                     ) : (
                       <p>
-                        <span className="font-medium">{quota.remaining} guest credit{quota.remaining === 1 ? "" : "s"} remaining.</span>{" "}
+                        <span className="font-medium">{quota.remaining} shared guest credit{quota.remaining === 1 ? "" : "s"} remaining.</span>{" "}
                         <Link href="/auth?next=/try-on" className="underline underline-offset-2">
                           Sign in
                         </Link>{" "}
-                        for unlimited access.
+                        for unlimited access to AI Hair + AI Nail Art.
                       </p>
                     )}
                   </div>

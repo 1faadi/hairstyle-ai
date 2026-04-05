@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
 const navLinks = [
   { label: "AI Hair", href: "#features" },
+  { label: "AI Nail Art", href: "/nail-art" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "FAQ", href: "#faq" },
 ]
@@ -90,6 +91,16 @@ export function Header() {
           >
             Try AI Hair
           </Link>
+          <Link
+            href="/nail-art"
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              className: "hidden sm:inline-flex",
+            })}
+          >
+            Try AI Nail Art
+          </Link>
           {isAuthenticated && (
             <button
               type="button"
@@ -150,6 +161,13 @@ export function Header() {
               Try AI Hair
             </Link>
           </div>
+          <Link
+            href="/nail-art"
+            className={buttonVariants({ variant: "outline", size: "sm", className: "mt-2 w-full" })}
+            onClick={() => setMobileOpen(false)}
+          >
+            Try AI Nail Art
+          </Link>
           {isAuthenticated && (
             <button
               type="button"
