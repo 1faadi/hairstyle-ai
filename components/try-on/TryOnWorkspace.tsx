@@ -28,6 +28,47 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 const POLL_INTERVAL_MS = 2500
 const MAX_POLL_ATTEMPTS = 72
 
+type HairColorOption = {
+  value: string
+  label: string
+  description: string
+  swatch: string
+}
+
+const HAIR_COLOR_OPTIONS: HairColorOption[] = [
+  { value: "blonde", label: "Blonde", description: "Blonde hair", swatch: "#f0d59a" },
+  { value: "platinumBlonde", label: "Platinum Blonde", description: "Platinum blonde hair", swatch: "#f4efdf" },
+  { value: "brown", label: "Brown", description: "Brown hair", swatch: "#6b4423" },
+  { value: "lightBrown", label: "Light Brown", description: "Light brown hair", swatch: "#a16b47" },
+  { value: "blue", label: "Blue", description: "Blue hair", swatch: "#2563eb" },
+  { value: "lightBlue", label: "Light Blue", description: "Light blue hair", swatch: "#7dd3fc" },
+  { value: "purple", label: "Purple", description: "Purple hair", swatch: "#7e22ce" },
+  { value: "lightPurple", label: "Light Purple", description: "Light purple hair", swatch: "#c4b5fd" },
+  { value: "pink", label: "Pink", description: "Pink hair", swatch: "#ec4899" },
+  { value: "black", label: "Black", description: "Black hair", swatch: "#111827" },
+  { value: "white", label: "White", description: "White hair", swatch: "#f8fafc" },
+  { value: "grey", label: "Grey", description: "Grey hair", swatch: "#9ca3af" },
+  { value: "silver", label: "Silver", description: "Silver hair", swatch: "#c0c0c0" },
+  { value: "red", label: "Red", description: "Red hair", swatch: "#dc2626" },
+  { value: "orange", label: "Orange", description: "Orange hair", swatch: "#f97316" },
+  { value: "green", label: "Green", description: "Green hair", swatch: "#16a34a" },
+  {
+    value: "gradient",
+    label: "Gradient",
+    description: "Gradient hair",
+    swatch: "linear-gradient(135deg, #f97316 0%, #eab308 30%, #16a34a 60%, #2563eb 100%)",
+  },
+  {
+    value: "multicolored",
+    label: "Multicolored",
+    description: "Multicolored hair",
+    swatch: "conic-gradient(from 45deg, #dc2626, #f97316, #eab308, #16a34a, #2563eb, #7e22ce, #ec4899, #dc2626)",
+  },
+  { value: "darkBlue", label: "Dark Blue", description: "Dark blue hair", swatch: "#1e3a8a" },
+  { value: "burgundy", label: "Burgundy", description: "Burgundy hair", swatch: "#7f1d1d" },
+  { value: "darkGreen", label: "Dark Green", description: "Dark green hair", swatch: "#14532d" },
+]
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -511,22 +552,57 @@ export function TryOnWorkspace() {
                 )}
               </section>
 
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold">3. Optional Hair Color</h2>
-                <input
-                  type="text"
-                  value={selectedColor}
-                  onChange={(event) => setSelectedColor(event.target.value)}
-                  placeholder="e.g. auburn, dark brown, blonde"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  disabled={styleMode === "custom"}
-                />
-                {styleMode === "custom" && (
-                  <p className="text-xs text-muted-foreground">
-                    Hair color applies only to preset mode.
-                  </p>
-                )}
-              </section>
+              {styleMode === "preset" && (
+                <section className="space-y-3">
+                  <h2 className="text-sm font-semibold">3. Optional Hair Color</h2>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedColor("")}
+                      aria-pressed={selectedColor === ""}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                        selectedColor === ""
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-border bg-background hover:border-primary/40"
+                      )}
+                    >
+                      <span className="size-4 shrink-0 rounded-full border border-border bg-background" />
+                      <span className="text-xs font-medium">No color override</span>
+                    </button>
+
+                    {HAIR_COLOR_OPTIONS.map((option) => {
+                      const isSelected = selectedColor === option.value
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setSelectedColor(option.value)}
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                              : "border-border bg-background hover:border-primary/40"
+                          )}
+                        >
+                          <span
+                            className="size-4 shrink-0 rounded-full border border-black/10"
+                            style={{ background: option.swatch }}
+                            aria-hidden
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-medium">{option.label}</span>
+                            <span className="block truncate text-[11px] text-muted-foreground">
+                              {option.description}
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
 
               <section className="space-y-3">
                 {/* Guest quota badge */}

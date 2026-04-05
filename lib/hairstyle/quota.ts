@@ -85,6 +85,17 @@ function getPendingStatuses(): string[] {
   return [...GUEST_PENDING_STATUSES]
 }
 
+async function ensureGuestUsageRow(ipHash: string): Promise<void> {
+  const supabase = getSupabaseServiceClient()
+  const { error } = await supabase
+    .from("guest_ip_usage")
+    .upsert({ ip_hash: ipHash }, { onConflict: "ip_hash", ignoreDuplicates: true })
+
+  if (error) {
+    throw new Error(`Failed to initialize guest usage: ${error.message}`)
+  }
+}
+
 async function getGuestUsageByIpHash(ipHash: string): Promise<GuestUsage> {
   const supabase = getSupabaseServiceClient()
 
@@ -188,6 +199,10 @@ export async function createGenerationJobRecord(input: {
   userId: string | null
   ipHash: string | null
 }): Promise<void> {
+  if (input.ipHash) {
+    await ensureGuestUsageRow(input.ipHash)
+  }
+
   const supabase = getSupabaseServiceClient()
   const { error } = await supabase.from("generation_jobs").insert({
     task_id: input.taskId,
