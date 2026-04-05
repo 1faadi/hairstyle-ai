@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Menu, Scissors, X } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
 const navLinks = [
   { label: "AI Hair", href: "#features" },
@@ -13,6 +14,33 @@ const navLinks = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const supabase = useMemo(() => getSupabaseBrowserClient(), [])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    const applySession = (session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) => {
+      const user = session?.user
+      setIsAuthenticated(Boolean(user))
+      const name =
+        (typeof user?.user_metadata?.name === "string" && user.user_metadata.name.trim()) ||
+        (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
+        (user?.email?.split("@")[0] ?? null)
+      setUserName(name)
+    }
+
+    supabase.auth.getSession().then(({ data }) => applySession(data.session))
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => applySession(session))
+    return () => data.subscription.unsubscribe()
+  }, [supabase])
+
+  async function handleSignOut() {
+    if (!supabase) return
+    await supabase.auth.signOut()
+    setMobileOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/75 backdrop-blur-xl">
@@ -37,9 +65,22 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-            Sign In
-          </Button>
+          {isAuthenticated && userName ? (
+            <span className="hidden rounded-md border border-border bg-secondary px-3 py-1 text-sm font-medium text-foreground sm:inline-flex">
+              {userName}
+            </span>
+          ) : (
+            <Link
+              href="/auth?next=/try-on"
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "hidden sm:inline-flex",
+              })}
+            >
+              Sign In
+            </Link>
+          )}
           <Link
             href="/try-on"
             className={buttonVariants({
@@ -49,6 +90,19 @@ export function Header() {
           >
             Try AI Hair
           </Link>
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "hidden sm:inline-flex",
+              })}
+            >
+              Sign Out
+            </button>
+          )}
           <button
             type="button"
             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
@@ -75,9 +129,19 @@ export function Header() {
             ))}
           </nav>
           <div className="mt-3 flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1">
-              Sign In
-            </Button>
+            {isAuthenticated && userName ? (
+              <span className="flex flex-1 items-center justify-center rounded-md border border-border bg-secondary px-2 text-sm font-medium text-foreground">
+                {userName}
+              </span>
+            ) : (
+              <Link
+                href="/auth?next=/try-on"
+                className={buttonVariants({ variant: "outline", size: "sm", className: "flex-1" })}
+                onClick={() => setMobileOpen(false)}
+              >
+                Sign In
+              </Link>
+            )}
             <Link
               href="/try-on"
               className={buttonVariants({ size: "sm", className: "flex-1" })}
@@ -86,6 +150,19 @@ export function Header() {
               Try AI Hair
             </Link>
           </div>
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "mt-2 w-full",
+              })}
+            >
+              Sign Out
+            </button>
+          )}
         </div>
       )}
     </header>

@@ -26,7 +26,7 @@ const faqs = [
   {
     question: "Can I try multiple hairstyles?",
     answer:
-      "Yes! You can try up to 10 hairstyles per session with your free credits. Each credit gives you one photorealistic transformation. You can purchase more credits anytime.",
+      "Yes. Guests can try up to 3 generations total per IP address. Sign in to continue with unlimited try-ons.",
   },
   {
     question: "Do you offer styles for men and women?",
@@ -36,7 +36,7 @@ const faqs = [
   {
     question: "How much does it cost?",
     answer:
-      "New users get 20 free credits to try the service. After that, credits can be purchased in bundles. Check our pricing section for the latest plans and packages.",
+      "You can start free with 3 guest tries per IP. Create an account to remove the guest limit.",
   },
   {
     question: "Can I use it on mobile?",

@@ -2,14 +2,19 @@
 
 Next.js 16 app with a dedicated `/try-on` flow:
 - Upload target portrait.
-- Choose hairstyle from curated Cloudinary-backed AILab presets.
-- Submit to AILab `hairstyle-editor-pro`.
+- Choose hairstyle from curated Cloudinary-backed AILab presets, or upload a custom hairstyle reference.
+- Submit preset jobs to AILab `hairstyle-editor-pro`.
+- Submit custom reference jobs to VModel `ai-hairstyle`.
+- Supabase email/password auth.
+- Guest quota enforcement (3 successful generations per IP, lifetime).
 - Poll task status and preview/download result.
 
 ## Requirements
 
 - Node.js 20+
 - AILab API key
+- VModel API token
+- Supabase project
 - Cloudinary account (for preset thumbnails)
 
 ## Environment Setup
@@ -19,13 +24,40 @@ Next.js 16 app with a dedicated `/try-on` flow:
 
 ```bash
 AILABAPI_API_KEY=
+VMODEL_API_TOKEN=
+VMODEL_MODEL_VERSION=5c0440717a995b0bbd93377bd65dbb4fe360f67967c506aa6bd8f6b660733a7e
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+# Optional fallback for newer Supabase key naming:
+# NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+GUEST_IP_HASH_SALT=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_PRESETS_FOLDER=hairstyle-ai/presets
+CLOUDINARY_UPLOADS_FOLDER=hairstyle-ai/uploads
 ```
 
 `CLOUDINARY_PRESETS_FOLDER` must point to the folder containing hairstyle reference images.
+`CLOUDINARY_UPLOADS_FOLDER` is used for temporary source/target uploads needed by VModel.
+`GUEST_IP_HASH_SALT` should be a long random string (used to hash client IPs before storage).
+
+## Supabase Migration
+
+Run the SQL migration in:
+
+- `supabase/migrations/20260405_guest_ip_quota.sql`
+
+This creates:
+
+- `guest_ip_usage`
+- `generation_jobs`
+- `consume_guest_credit_on_success(...)` RPC
+
+## Reverse Proxy Requirement (VPS)
+
+Guest limits are enforced by client IP. Ensure your proxy forwards real client IP headers (`X-Forwarded-For`, `X-Real-IP` or `CF-Connecting-IP`) to Next.js.
 
 ## Run Locally
 
@@ -39,6 +71,7 @@ Open `http://localhost:3000` and click any CTA, or open `http://localhost:3000/t
 ## Internal API Endpoints
 
 - `GET /api/hairstyle/presets`
+- `GET /api/hairstyle/quota`
 - `POST /api/hairstyle/tasks`
 - `GET /api/hairstyle/tasks/[taskId]`
 - `GET /api/hairstyle/tasks/[taskId]/result`

@@ -1,4 +1,7 @@
-import type { HairstyleTaskStatus } from "@/lib/hairstyle/constants"
+import type {
+  HairstyleTaskProvider,
+  HairstyleTaskStatus,
+} from "@/lib/hairstyle/constants"
 
 export type HairstylePreset = {
   id: string
@@ -8,9 +11,18 @@ export type HairstylePreset = {
   thumbnailUrl: string
 }
 
+export type QuotaSnapshot = {
+  mode: "guest" | "user"
+  remaining: number | null
+  pending: number | null
+  requiresAuth: boolean
+}
+
 export type TaskResponse = {
   taskId: string
   status: HairstyleTaskStatus
+  provider: HairstyleTaskProvider
+  quota: QuotaSnapshot
 }
 
 export type TaskStatusResponse = {
@@ -18,4 +30,5 @@ export type TaskStatusResponse = {
   status: HairstyleTaskStatus
   error: string | null
   resultPath: string | null
+  quota: QuotaSnapshot | null
 }

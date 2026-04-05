@@ -19,9 +19,11 @@ import { cn } from "@/lib/utils"
 import type { HairstyleTaskStatus } from "@/lib/hairstyle/constants"
 import type {
   HairstylePreset,
+  QuotaSnapshot,
   TaskResponse,
   TaskStatusResponse,
 } from "@/lib/hairstyle/types"
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
 const POLL_INTERVAL_MS = 2500
 const MAX_POLL_ATTEMPTS = 72
@@ -65,13 +67,22 @@ function getReadableStatus(status: HairstyleTaskStatus | null): string {
 }
 
 export function TryOnWorkspace() {
+  const supabase = useMemo(() => getSupabaseBrowserClient(), [])
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [quota, setQuota] = useState<QuotaSnapshot | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [showWelcomeCard, setShowWelcomeCard] = useState(false)
+
   const [presets, setPresets] = useState<HairstylePreset[]>([])
   const [presetGender, setPresetGender] = useState<"male" | "female">("female")
   const [brokenPresetIds, setBrokenPresetIds] = useState<Set<string>>(new Set())
   const [presetsLoading, setPresetsLoading] = useState(true)
   const [presetsError, setPresetsError] = useState<string | null>(null)
 
+  const [styleMode, setStyleMode] = useState<"preset" | "custom">("preset")
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
+  const [customSourceFile, setCustomSourceFile] = useState<File | null>(null)
+  const [customSourcePreview, setCustomSourcePreview] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState("")
   const [targetFile, setTargetFile] = useState<File | null>(null)
   const [targetPreview, setTargetPreview] = useState<string | null>(null)
@@ -83,6 +94,60 @@ export function TryOnWorkspace() {
   const [resultUrl, setResultUrl] = useState<string | null>(null)
 
   const pollTokenRef = useRef(0)
+
+  function getDisplayNameFromSession(session: { user?: { email?: string | null; user_metadata?: Record<string, unknown> } } | null): string | null {
+    const metadata = session?.user?.user_metadata
+    const name =
+      (typeof metadata?.name === "string" && metadata.name.trim()) ||
+      (typeof metadata?.full_name === "string" && metadata.full_name.trim()) ||
+      (session?.user?.email?.split("@")[0] ?? null)
+    return name
+  }
+
+  // Sync Supabase session token so API calls can authenticate the user
+  useEffect(() => {
+    if (!supabase) return
+
+    supabase.auth.getSession().then(({ data }) => {
+      setAccessToken(data.session?.access_token ?? null)
+      setUserName(getDisplayNameFromSession(data.session))
+    })
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAccessToken(session?.access_token ?? null)
+      setUserName(getDisplayNameFromSession(session))
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [supabase])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("welcome") !== "1") return
+    if (!accessToken) return
+    setShowWelcomeCard(true)
+    const timer = setTimeout(() => setShowWelcomeCard(false), 6000)
+    return () => clearTimeout(timer)
+  }, [accessToken])
+
+  function authHeaders(): HeadersInit {
+    if (!accessToken) return {}
+    return { Authorization: `Bearer ${accessToken}` }
+  }
+
+  // Load quota on mount (and whenever auth state changes)
+  useEffect(() => {
+    let canceled = false
+    fetch("/api/hairstyle/quota", { cache: "no-store", headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { quota?: QuotaSnapshot } | null) => {
+        if (!canceled && data?.quota) setQuota(data.quota)
+      })
+      .catch(() => {/* non-critical */})
+    return () => { canceled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken])
 
   const selectedPreset = useMemo(
     () => presets.find((preset) => preset.id === selectedPresetId) ?? null,
@@ -150,6 +215,15 @@ export function TryOnWorkspace() {
   }, [targetFile])
 
   useEffect(() => {
+    const preview = createObjectPreview(customSourceFile)
+    setCustomSourcePreview(preview)
+
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [customSourceFile])
+
+  useEffect(() => {
     return () => {
       pollTokenRef.current += 1
     }
@@ -161,6 +235,7 @@ export function TryOnWorkspace() {
 
       const response = await fetch(`/api/hairstyle/tasks/${encodeURIComponent(nextTaskId)}`, {
         cache: "no-store",
+        headers: authHeaders(),
       })
 
       if (!response.ok) {
@@ -170,6 +245,7 @@ export function TryOnWorkspace() {
       const data = (await response.json()) as TaskStatusResponse
       if (pollTokenRef.current !== token) return
 
+      if (data.quota) setQuota(data.quota)
       setTaskStatus(data.status)
 
       if (data.status === "succeeded" && data.resultPath) {
@@ -195,8 +271,12 @@ export function TryOnWorkspace() {
       return
     }
 
-    if (!selectedPreset) {
+    if (styleMode === "preset" && !selectedPreset) {
       setErrorMessage("Please choose a hairstyle preset.")
+      return
+    }
+    if (styleMode === "custom" && !customSourceFile) {
+      setErrorMessage("Please upload a custom hairstyle reference image.")
       return
     }
 
@@ -212,22 +292,37 @@ export function TryOnWorkspace() {
     try {
       const formData = new FormData()
       formData.append("targetImage", targetFile)
-      formData.append("hairStyle", selectedPreset.hairStyle)
-      formData.append("imageSize", "1")
-      if (selectedColor.trim()) {
-        formData.append("color", selectedColor.trim())
+
+      if (styleMode === "custom" && customSourceFile) {
+        formData.append("sourceImage", customSourceFile)
+      } else if (selectedPreset) {
+        formData.append("hairStyle", selectedPreset.hairStyle)
+        formData.append("imageSize", "1")
+        if (selectedColor.trim()) {
+          formData.append("color", selectedColor.trim())
+        }
       }
 
       const response = await fetch("/api/hairstyle/tasks", {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
       })
 
       if (!response.ok) {
-        throw new Error(await getErrorMessage(response))
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string
+          requiresAuth?: boolean
+        }
+        if (body.requiresAuth) {
+          setErrorMessage("You've used all 3 guest credits. Sign in for unlimited generations.")
+          return
+        }
+        throw new Error(body.error || `Request failed (${response.status})`)
       }
 
       const data = (await response.json()) as TaskResponse
+      setQuota(data.quota)
       setTaskId(data.taskId)
       setTaskStatus(data.status)
 
@@ -248,6 +343,15 @@ export function TryOnWorkspace() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/10 to-background">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        {showWelcomeCard && (
+          <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-primary">
+            <p className="text-sm font-semibold">
+              Welcome{userName ? `, ${userName}` : ""}! Your account is ready.
+            </p>
+            <p className="text-xs text-primary/90">You now have unlimited try-ons while signed in.</p>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <Link
             href="/"
@@ -261,7 +365,14 @@ export function TryOnWorkspace() {
             Back to Home
           </Link>
 
-          <p className="text-xs text-muted-foreground">Supported: JPG and PNG up to 5MB</p>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Supported: JPG and PNG up to 5MB</p>
+            <p className="text-xs font-medium text-foreground">
+              {quota?.mode === "user"
+                ? "Credits: Unlimited"
+                : `Free credits left: ${quota?.remaining ?? "--"}/3`}
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -282,13 +393,31 @@ export function TryOnWorkspace() {
 
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold">2. Choose a Style Preset</h2>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={styleMode === "preset" ? "default" : "outline"}
+                    onClick={() => setStyleMode("preset")}
+                  >
+                    Presets
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={styleMode === "custom" ? "default" : "outline"}
+                    onClick={() => setStyleMode("custom")}
+                  >
+                    Custom
+                  </Button>
+                </div>
                 {presetsLoading && (
                   <p className="text-sm text-muted-foreground">Loading presets...</p>
                 )}
                 {presetsError && (
                   <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
                 )}
-                {!presetsLoading && presets.length > 0 && (
+                {styleMode === "preset" && !presetsLoading && presets.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -308,17 +437,17 @@ export function TryOnWorkspace() {
                     </Button>
                   </div>
                 )}
-                {!presetsLoading && presets.length === 0 && (
+                {styleMode === "preset" && !presetsLoading && presets.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     No AILab presets available right now.
                   </p>
                 )}
-                {!presetsLoading && presets.length > 0 && filteredPresets.length === 0 && (
+                {styleMode === "preset" && !presetsLoading && presets.length > 0 && filteredPresets.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     No presets available for this filter.
                   </p>
                 )}
-                {!presetsLoading && filteredPresets.length > 0 && (
+                {styleMode === "preset" && !presetsLoading && filteredPresets.length > 0 && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {filteredPresets.map((preset) => {
                       const isActive = preset.id === selectedPresetId
@@ -357,6 +486,29 @@ export function TryOnWorkspace() {
                     })}
                   </div>
                 )}
+                {styleMode === "custom" && (
+                  <div className="space-y-3 rounded-lg border border-border bg-secondary/20 p-3">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) =>
+                        setCustomSourceFile(event.target.files?.[0] ?? null)
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    />
+                    {customSourcePreview ? (
+                      <img
+                        src={customSourcePreview}
+                        alt="Custom hairstyle reference preview"
+                        className="h-32 w-full rounded-lg border border-border object-cover"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Upload a hairstyle reference image to use custom transfer mode.
+                      </p>
+                    )}
+                  </div>
+                )}
               </section>
 
               <section className="space-y-2">
@@ -367,15 +519,51 @@ export function TryOnWorkspace() {
                   onChange={(event) => setSelectedColor(event.target.value)}
                   placeholder="e.g. auburn, dark brown, blonde"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  disabled={styleMode === "custom"}
                 />
+                {styleMode === "custom" && (
+                  <p className="text-xs text-muted-foreground">
+                    Hair color applies only to preset mode.
+                  </p>
+                )}
               </section>
 
               <section className="space-y-3">
+                {/* Guest quota badge */}
+                {quota?.mode === "guest" && (
+                  <div className={`rounded-lg border px-3 py-2 text-sm ${
+                    quota.requiresAuth
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                  }`}>
+                    {quota.requiresAuth ? (
+                      <p className="flex items-center gap-2">
+                        <AlertCircle className="size-4 shrink-0" />
+                        <span>
+                          Guest limit reached.{" "}
+                          <Link href="/auth?next=/try-on" className="font-semibold underline underline-offset-2">
+                            Sign in
+                          </Link>{" "}
+                          for unlimited generations.
+                        </span>
+                      </p>
+                    ) : (
+                      <p>
+                        <span className="font-medium">{quota.remaining} guest credit{quota.remaining === 1 ? "" : "s"} remaining.</span>{" "}
+                        <Link href="/auth?next=/try-on" className="underline underline-offset-2">
+                          Sign in
+                        </Link>{" "}
+                        for unlimited access.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <Button
                   type="button"
                   size="lg"
                   className="h-11 w-full gap-2"
-                  disabled={isGenerating}
+                  disabled={isGenerating || quota?.requiresAuth === true}
                   onClick={handleGenerate}
                 >
                   {isGenerating ? (
