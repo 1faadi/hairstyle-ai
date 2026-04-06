@@ -68,20 +68,29 @@ export async function POST(request: Request) {
 
     const formData = await request.formData()
     const targetImage = validateNailArtImageFile(formData.get("targetImage"), "targetImage")
-    const referenceImage = validateNailArtImageFile(
-      formData.get("referenceImage"),
-      "referenceImage"
-    )
-    const resolution = getOptionalString(formData.get("resolution")) ?? "1K"
+    const nailName = getOptionalString(formData.get("nailName"))
+    const nailDescription = getOptionalString(formData.get("nailDescription"))
 
-    if (!["1K", "2K"].includes(resolution)) {
-      throw new HttpError(400, "resolution must be one of: 1K, 2K")
+    if (!nailName) {
+      throw new HttpError(400, "Missing required field: nailName")
+    }
+
+    if (!nailDescription) {
+      throw new HttpError(400, "Missing required field: nailDescription")
+    }
+
+    if (nailName.length > 500) {
+      throw new HttpError(400, "nailName must not exceed 500 characters")
+    }
+
+    if (nailDescription.length > 1000) {
+      throw new HttpError(400, "nailDescription must not exceed 1000 characters")
     }
 
     const task = await createAILabNailArtTask({
       image: targetImage,
-      referenceImage,
-      resolution: resolution as "1K" | "2K",
+      nailName,
+      nailDescription,
     })
     const scopedTaskId = toProviderTaskId("nail", "ailab", task.taskId)
 

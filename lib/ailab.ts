@@ -100,18 +100,14 @@ export async function createAILabHairstyleTask(input: {
 
 export async function createAILabNailArtTask(input: {
   image: File
-  referenceImage: File
-  resolution?: "1K" | "2K"
+  nailName: string
+  nailDescription: string
 }): Promise<{ taskId: string; status: HairstyleTaskStatus }> {
   const formData = new FormData()
   formData.append("task_type", "async")
   formData.append("image", input.image, input.image.name || "hand.jpg")
-  formData.append(
-    "reference_image",
-    input.referenceImage,
-    input.referenceImage.name || "reference.jpg"
-  )
-  formData.append("resolution", input.resolution || "1K")
+  formData.append("nail_name", input.nailName)
+  formData.append("nail_desc", input.nailDescription)
 
   const response = await fetch(AILAB_NAIL_ART_CREATE_TASK_URL, {
     method: "POST",

@@ -5,7 +5,7 @@ Next.js 16 app with a dedicated `/try-on` flow:
 - Choose hairstyle from curated Cloudinary-backed AILab presets, or upload a custom hairstyle reference.
 - Submit preset jobs to AILab `hairstyle-editor-pro`.
 - Submit custom reference jobs to VModel `ai-hairstyle`.
-- Dedicated `/nail-art` flow using AILab `ai-nail-art-pro` with source + reference images.
+- Dedicated `/nail-art` flow using AILab `ai-nail-art` with source image + prompt fields.
 - Supabase email/password auth.
 - Guest quota enforcement (3 successful generations per IP, shared across AI Hair + AI Nail Art).
 - Poll task status and preview/download result.
@@ -84,8 +84,8 @@ Open `http://localhost:3000` and click any CTA, or open `http://localhost:3000/t
 
 Nail Art `POST /api/nail-art/tasks` expects:
 - `targetImage` (required file, JPG/JPEG/PNG/WEBP, max 10MB)
-- `referenceImage` (required file, JPG/JPEG/PNG/WEBP, max 10MB)
-- `resolution` (optional: `1K` or `2K`, default `1K`)
+- `nailName` (required string, max 500 chars)
+- `nailDescription` (required string, max 1000 chars)
 
 Task IDs now use `feature:provider:providerTaskId` (for example `hair:ailab:...`, `nail:ailab:...`).
 Legacy `provider:taskId` IDs are still accepted for older Hair jobs.

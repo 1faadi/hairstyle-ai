@@ -52,7 +52,7 @@ function getReadableStatus(status: HairstyleTaskStatus | null): string {
     case "starting":
       return "Queued..."
     case "processing":
-      return "Applying selected nail art..."
+      return "Generating nail art..."
     case "succeeded":
       return "Generation complete."
     case "failed":
@@ -71,9 +71,8 @@ export function NailArtWorkspace() {
 
   const [targetFile, setTargetFile] = useState<File | null>(null)
   const [targetPreview, setTargetPreview] = useState<string | null>(null)
-  const [referenceFile, setReferenceFile] = useState<File | null>(null)
-  const [referencePreview, setReferencePreview] = useState<string | null>(null)
-  const [resolution, setResolution] = useState<"1K" | "2K">("1K")
+  const [nailName, setNailName] = useState("")
+  const [nailDescription, setNailDescription] = useState("")
 
   const [taskId, setTaskId] = useState<string | null>(null)
   const [taskStatus, setTaskStatus] = useState<HairstyleTaskStatus | null>(null)
@@ -129,15 +128,6 @@ export function NailArtWorkspace() {
   }, [targetFile])
 
   useEffect(() => {
-    const preview = createObjectPreview(referenceFile)
-    setReferencePreview(preview)
-
-    return () => {
-      if (preview) URL.revokeObjectURL(preview)
-    }
-  }, [referenceFile])
-
-  useEffect(() => {
     return () => {
       pollTokenRef.current += 1
     }
@@ -169,7 +159,7 @@ export function NailArtWorkspace() {
       }
 
       if (data.status === "failed" || data.status === "canceled") {
-        setErrorMessage(data.error || "Generation failed. Please try another reference.")
+        setErrorMessage(data.error || "Generation failed. Please adjust your prompt and try again.")
         return
       }
 
@@ -185,8 +175,13 @@ export function NailArtWorkspace() {
       return
     }
 
-    if (!referenceFile) {
-      setErrorMessage("Please upload a reference nail design image.")
+    if (!nailName.trim()) {
+      setErrorMessage("Please enter a nail design name.")
+      return
+    }
+
+    if (!nailDescription.trim()) {
+      setErrorMessage("Please enter a nail design description.")
       return
     }
 
@@ -202,8 +197,8 @@ export function NailArtWorkspace() {
     try {
       const formData = new FormData()
       formData.append("targetImage", targetFile)
-      formData.append("referenceImage", referenceFile)
-      formData.append("resolution", resolution)
+      formData.append("nailName", nailName.trim())
+      formData.append("nailDescription", nailDescription.trim())
 
       const response = await fetch("/api/nail-art/tasks", {
         method: "POST",
@@ -292,38 +287,28 @@ export function NailArtWorkspace() {
               </section>
 
               <section className="space-y-2">
-                <h2 className="text-sm font-semibold">2. Upload Reference Nail Design</h2>
+                <h2 className="text-sm font-semibold">2. Nail Design Name</h2>
                 <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
+                  type="text"
+                  maxLength={500}
+                  value={nailName}
+                  onChange={(event) => setNailName(event.target.value)}
+                  placeholder="Golden Butterfly Glow"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 />
+                <p className="text-xs text-muted-foreground">{nailName.length}/500</p>
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-sm font-semibold">3. Output Resolution</h2>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={resolution === "1K" ? "default" : "outline"}
-                    onClick={() => setResolution("1K")}
-                  >
-                    1K
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={resolution === "2K" ? "default" : "outline"}
-                    onClick={() => setResolution("2K")}
-                  >
-                    2K
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  1K is faster. 2K can provide higher detail.
-                </p>
+                <h2 className="text-sm font-semibold">3. Nail Design Description</h2>
+                <textarea
+                  maxLength={1000}
+                  value={nailDescription}
+                  onChange={(event) => setNailDescription(event.target.value)}
+                  placeholder="Champagne nude shimmer with gold butterfly accents for a soft, luxe finish."
+                  className="min-h-28 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">{nailDescription.length}/1000</p>
               </section>
 
               <section className="space-y-3">
@@ -438,19 +423,16 @@ export function NailArtWorkspace() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Reference</p>
+                  <p className="text-sm font-medium">Prompt</p>
                   <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
-                    {referencePreview ? (
-                      <img
-                        src={referencePreview}
-                        alt="Uploaded reference nail design preview"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                        Upload a reference design to preview it here.
-                      </div>
-                    )}
+                    <div className="flex h-full flex-col gap-2 overflow-auto p-4 text-sm">
+                      <p className="font-semibold text-foreground">
+                        {nailName.trim() || "No design name yet"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {nailDescription.trim() || "Add a detailed description to guide the generated result."}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

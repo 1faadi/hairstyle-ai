@@ -8,7 +8,7 @@ export const ALLOWED_IMAGE_MIME_TYPES = new Set([
 export const AILAB_CREATE_TASK_URL =
   "https://www.ailabapi.com/api/portrait/effects/hairstyle-editor-pro"
 export const AILAB_NAIL_ART_CREATE_TASK_URL =
-  "https://www.ailabapi.com/api/image/editing/ai-nail-art-pro"
+  "https://www.ailabapi.com/api/image/editing/ai-nail-art"
 export const AILAB_GET_TASK_URL =
   "https://www.ailabapi.com/api/common/query-async-task-result"
 export const VMODEL_CREATE_TASK_URL = "https://api.vmodel.ai/api/tasks/v1/create"
