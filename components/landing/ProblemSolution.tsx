@@ -38,14 +38,14 @@ export function ProblemSolution() {
         <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
           {/* Problems column header */}
           <div className="flex items-center gap-2 mb-2">
-            <div className="size-6 rounded-full bg-red-100 flex items-center justify-center">
-              <X className="size-3 text-red-600" />
+            <div className="flex size-6 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/60">
+              <X className="size-3 text-red-600 dark:text-red-400" />
             </div>
             <span className="text-sm font-semibold text-foreground uppercase tracking-wide">Before AI Hair</span>
           </div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="size-6 rounded-full bg-green-100 flex items-center justify-center">
-              <Check className="size-3 text-green-600" />
+            <div className="flex size-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/60">
+              <Check className="size-3 text-green-600 dark:text-green-400" />
             </div>
             <span className="text-sm font-semibold text-foreground uppercase tracking-wide">With AI Hair</span>
           </div>
@@ -55,10 +55,10 @@ export function ProblemSolution() {
               {/* Problem card */}
               <div
                 key={`problem-${problem}`}
-                className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100/50 transition-colors"
+                className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 transition-colors hover:bg-red-100/50 dark:border-red-900/40 dark:bg-red-950/35 dark:hover:bg-red-950/50"
               >
-                <div className="size-7 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <X className="size-3.5 text-red-600" />
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/60">
+                  <X className="size-3.5 text-red-600 dark:text-red-400" />
                 </div>
                 <p className="text-sm font-medium text-foreground">{problem}</p>
               </div>
@@ -66,10 +66,10 @@ export function ProblemSolution() {
               {/* Solution card */}
               <div
                 key={`solution-${solution}`}
-                className="flex items-start gap-3 p-4 rounded-xl border border-green-200 bg-green-50 hover:bg-green-100/50 transition-colors"
+                className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 transition-colors hover:bg-green-100/50 dark:border-green-900/40 dark:bg-green-950/35 dark:hover:bg-green-950/50"
               >
-                <div className="size-7 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <Check className="size-3.5 text-green-600" />
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/60">
+                  <Check className="size-3.5 text-green-600 dark:text-green-400" />
                 </div>
                 <p className="text-sm font-medium text-foreground">{solution}</p>
               </div>

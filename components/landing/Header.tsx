@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { SITE_LOGO_PATH, SITE_SHORT_NAME } from "@/lib/site"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 
 const navLinks = [
@@ -84,6 +85,7 @@ export function Header() {
 
         {/* Desktop / large tablet only: inline actions stay off small screens to avoid overflow */}
         <div className="hidden min-w-0 shrink-0 items-center gap-1.5 lg:flex xl:gap-2">
+          <ThemeToggle />
           {isAuthenticated && userName ? (
             <span className="max-w-[8rem] truncate rounded-md border border-border bg-secondary px-2 py-1 text-xs font-medium text-foreground xl:max-w-[12rem] xl:px-3 xl:text-sm">
               {userName}
@@ -162,6 +164,9 @@ export function Header() {
             ))}
           </nav>
           <div className="mt-4 grid gap-2">
+            <div className="flex justify-center pb-1">
+              <ThemeToggle />
+            </div>
             {isAuthenticated && userName ? (
               <span className="rounded-lg border border-border bg-secondary px-3 py-2 text-center text-sm font-medium text-foreground">
                 {userName}

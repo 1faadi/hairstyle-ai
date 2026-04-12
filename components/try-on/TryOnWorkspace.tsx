@@ -14,6 +14,7 @@ import {
   Wand2,
 } from "lucide-react"
 
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -462,17 +463,20 @@ export function TryOnWorkspace() {
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/10 to-background">
       <main className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <Link
-            href="/"
-            className={buttonVariants({
-              variant: "outline",
-              size: "sm",
-              className: "gap-2 shrink-0",
-            })}
-          >
-            <ArrowLeft className="size-4" />
-            Back to Home
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/"
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "gap-2 shrink-0",
+              })}
+            >
+              <ArrowLeft className="size-4" />
+              Back to Home
+            </Link>
+            <ThemeToggle />
+          </div>
 
           <div className="min-w-0 text-right">
             <p className="text-xs text-muted-foreground">JPG, PNG up to 5MB</p>
@@ -929,7 +933,7 @@ export function TryOnWorkspace() {
                 <div className="rounded-lg border border-border/70 bg-secondary/30 px-3 py-2 text-sm">
                   <p className="flex items-center gap-2">
                     {taskStatus === "succeeded" ? (
-                      <CheckCircle2 className="size-4 text-green-600" />
+                      <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" />
                     ) : taskStatus === "failed" || taskStatus === "canceled" ? (
                       <AlertCircle className="size-4 text-destructive" />
                     ) : isGenerating ? (

@@ -16,9 +16,18 @@ import {
   User,
 } from "lucide-react"
 
+import { ThemeToggle } from "@/components/theme-toggle"
+import { Button } from "@/components/ui/button"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+import { cn } from "@/lib/utils"
 
 type AuthMode = "signin" | "signup"
+
+const authFieldClassName = cn(
+  "h-11 w-full rounded-lg border border-input bg-background pl-10 text-sm text-foreground outline-none",
+  "placeholder:text-muted-foreground",
+  "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+)
 
 export function AuthForm() {
   const router = useRouter()
@@ -153,251 +162,102 @@ export function AuthForm() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-        background:
-          "linear-gradient(135deg, oklch(0.97 0.005 230) 0%, oklch(0.94 0.01 230) 100%)",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: "900px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            overflow: "hidden",
-            borderRadius: "16px",
-            border: "1px solid oklch(0.9 0.02 230)",
-            backgroundColor: "oklch(1 0 0)",
-            boxShadow: "0 20px 60px -10px rgba(0,0,0,0.12), 0 8px 20px -6px rgba(0,0,0,0.08)",
-          }}
-          className="lg-two-col"
-        >
-          <div
-            className="auth-left-panel"
-            style={{
-              background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-              padding: "2.5rem",
-              color: "white",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-muted/50 via-background to-background p-4">
+      <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
+        <ThemeToggle />
+      </div>
+      <div className="w-full max-w-[900px]">
+        <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-border bg-card shadow-xl lg:grid-cols-[420px_minmax(0,1fr)]">
+          <div className="relative hidden min-h-[280px] flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-500 to-blue-800 p-10 text-white lg:flex">
             <div
-              style={{
-                position: "absolute",
-                top: "-60px",
-                left: "-60px",
-                width: "200px",
-                height: "200px",
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.08)",
-                filter: "blur(40px)",
-                pointerEvents: "none",
-              }}
+              className="pointer-events-none absolute -left-14 -top-14 size-[200px] rounded-full bg-white/10 blur-3xl"
+              aria-hidden
             />
             <div
-              style={{
-                position: "absolute",
-                bottom: "-40px",
-                right: "-40px",
-                width: "240px",
-                height: "240px",
-                borderRadius: "50%",
-                background: "rgba(147,197,253,0.12)",
-                filter: "blur(40px)",
-                pointerEvents: "none",
-              }}
+              className="pointer-events-none absolute -bottom-10 -right-10 size-60 rounded-full bg-sky-300/15 blur-3xl"
+              aria-hidden
             />
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                position: "relative",
-                zIndex: 1,
-              }}
-            >
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  background: "rgba(255,255,255,0.2)",
-                  backdropFilter: "blur(8px)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
+            <div className="relative z-10 flex items-center gap-2.5">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-white/20 backdrop-blur-md">
                 <Scissors size={18} />
               </div>
-              <span style={{ fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
-                AI Hair
-              </span>
+              <span className="text-lg font-semibold tracking-tight">AI Hair</span>
             </div>
 
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background: "rgba(255,255,255,0.15)",
-                  backdropFilter: "blur(8px)",
-                  borderRadius: "100px",
-                  padding: "4px 12px",
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  marginBottom: "16px",
-                }}
-              >
+            <div className="relative z-10">
+              <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur-md">
                 <Sparkles size={12} />
                 Powered by AI
               </div>
-              <h1
-                style={{
-                  fontSize: "1.875rem",
-                  fontWeight: 700,
-                  lineHeight: 1.25,
-                  marginBottom: "12px",
-                  letterSpacing: "-0.02em",
-                }}
-              >
+              <h1 className="mb-3 text-3xl font-bold leading-tight tracking-tight">
                 Transform your
                 <br />
                 hairstyle in seconds.
               </h1>
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  color: "rgba(255,255,255,0.75)",
-                  lineHeight: 1.6,
-                  maxWidth: "240px",
-                }}
-              >
+              <p className="max-w-[240px] text-sm leading-relaxed text-white/75">
                 Sign in to unlock unlimited generations without guest limits.
               </p>
             </div>
 
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <div style={{ height: "1px", background: "rgba(255,255,255,0.2)", marginBottom: "16px" }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="relative z-10">
+              <div className="mb-4 h-px bg-white/20" />
+              <ul className="flex flex-col gap-2.5 text-sm text-white/80">
                 {[
                   "Unlimited try-ons after sign in",
                   "Preset & custom hairstyle support",
                   "Fast generation & instant download",
                 ].map((f) => (
-                  <div
-                    key={f}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      fontSize: "0.875rem",
-                      color: "rgba(255,255,255,0.8)",
-                    }}
-                  >
-                    <CheckCircle2 size={16} style={{ flexShrink: 0, color: "rgba(255,255,255,0.6)" }} />
+                  <li key={f} className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="shrink-0 text-white/60" aria-hidden />
                     {f}
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           </div>
 
-          <div
-            style={{
-              padding: "2.5rem",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "oklch(1 0 0)",
-            }}
-          >
-            <div style={{ marginBottom: "1.75rem" }}>
-              <h2
-                style={{
-                  fontSize: "1.5rem",
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
-                  color: "oklch(0.22 0.02 245)",
-                  marginBottom: "4px",
-                }}
-              >
+          <div className="flex flex-col bg-card p-8 sm:p-10">
+            <div className="mb-7">
+              <h2 className="mb-1 text-2xl font-bold tracking-tight text-foreground">
                 {mode === "signin" ? "Welcome back" : "Create an account"}
               </h2>
-              <p style={{ fontSize: "0.875rem", color: "oklch(0.5 0.02 245)" }}>
+              <p className="text-sm text-muted-foreground">
                 {mode === "signin"
                   ? "Sign in to your account to continue."
                   : "Sign up to remove guest limits and keep generating."}
               </p>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "4px",
-                padding: "4px",
-                borderRadius: "10px",
-                border: "1px solid oklch(0.9 0.02 230)",
-                background: "oklch(0.965 0.01 230)",
-                marginBottom: "1.75rem",
-              }}
-            >
+            <div className="mb-7 grid grid-cols-2 gap-1 rounded-[10px] border border-border bg-muted/60 p-1">
               {(["signin", "signup"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => switchMode(tab)}
-                  style={{
-                    padding: "8px 0",
-                    fontSize: "0.875rem",
-                    fontWeight: 500,
-                    borderRadius: "7px",
-                    border: "none",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    background: mode === tab ? "oklch(1 0 0)" : "transparent",
-                    color: mode === tab ? "oklch(0.22 0.02 245)" : "oklch(0.5 0.02 245)",
-                    boxShadow: mode === tab ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                  }}
+                  className={cn(
+                    "rounded-md py-2 text-sm font-medium transition-colors",
+                    mode === tab
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
                   {tab === "signin" ? "Sign In" : "Sign Up"}
                 </button>
               ))}
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {mode === "signup" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label
-                    htmlFor="auth-name"
-                    style={{ fontSize: "0.875rem", fontWeight: 500, color: "oklch(0.22 0.02 245)" }}
-                  >
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              {mode === "signup" ? (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="auth-name" className="text-sm font-medium text-foreground">
                     Name
                   </label>
-                  <div style={{ position: "relative" }}>
+                  <div className="relative">
                     <User
                       size={16}
-                      style={{
-                        position: "absolute",
-                        left: "12px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: "oklch(0.5 0.02 245)",
-                        pointerEvents: "none",
-                        flexShrink: 0,
-                      }}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
                     />
                     <input
                       id="auth-name"
@@ -406,45 +266,21 @@ export function AuthForm() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Your full name"
-                      style={{
-                        width: "100%",
-                        height: "42px",
-                        paddingLeft: "40px",
-                        paddingRight: "14px",
-                        paddingTop: "0",
-                        paddingBottom: "0",
-                        fontSize: "0.875rem",
-                        border: "1px solid oklch(0.9 0.02 230)",
-                        borderRadius: "8px",
-                        outline: "none",
-                        background: "transparent",
-                        color: "oklch(0.22 0.02 245)",
-                        boxSizing: "border-box",
-                      }}
+                      className={cn(authFieldClassName, "pr-3.5")}
                     />
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label
-                  htmlFor="auth-email"
-                  style={{ fontSize: "0.875rem", fontWeight: 500, color: "oklch(0.22 0.02 245)" }}
-                >
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="auth-email" className="text-sm font-medium text-foreground">
                   Email
                 </label>
-                <div style={{ position: "relative" }}>
+                <div className="relative">
                   <Mail
                     size={16}
-                    style={{
-                      position: "absolute",
-                      left: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "oklch(0.5 0.02 245)",
-                      pointerEvents: "none",
-                      flexShrink: 0,
-                    }}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
                   />
                   <input
                     id="auth-email"
@@ -454,49 +290,25 @@ export function AuthForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    style={{
-                      width: "100%",
-                      height: "42px",
-                      paddingLeft: "40px",
-                      paddingRight: "14px",
-                      paddingTop: "0",
-                      paddingBottom: "0",
-                      fontSize: "0.875rem",
-                      border: "1px solid oklch(0.9 0.02 230)",
-                      borderRadius: "8px",
-                      outline: "none",
-                      background: "transparent",
-                      color: "oklch(0.22 0.02 245)",
-                      boxSizing: "border-box",
-                    }}
+                    className={cn(authFieldClassName, "pr-3.5")}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <label
-                    htmlFor="auth-password"
-                    style={{ fontSize: "0.875rem", fontWeight: 500, color: "oklch(0.22 0.02 245)" }}
-                  >
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="auth-password" className="text-sm font-medium text-foreground">
                     Password
                   </label>
-                  {mode === "signup" && (
-                    <span style={{ fontSize: "0.75rem", color: "oklch(0.5 0.02 245)" }}>Min. 6 characters</span>
-                  )}
+                  {mode === "signup" ? (
+                    <span className="text-xs text-muted-foreground">Min. 6 characters</span>
+                  ) : null}
                 </div>
-                <div style={{ position: "relative" }}>
+                <div className="relative">
                   <Lock
                     size={16}
-                    style={{
-                      position: "absolute",
-                      left: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "oklch(0.5 0.02 245)",
-                      pointerEvents: "none",
-                      flexShrink: 0,
-                    }}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
                   />
                   <input
                     id="auth-password"
@@ -507,66 +319,29 @@ export function AuthForm() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={mode === "signin" ? "Your password" : "Create a password"}
-                    style={{
-                      width: "100%",
-                      height: "42px",
-                      paddingLeft: "40px",
-                      paddingRight: "44px",
-                      paddingTop: "0",
-                      paddingBottom: "0",
-                      fontSize: "0.875rem",
-                      border: "1px solid oklch(0.9 0.02 230)",
-                      borderRadius: "8px",
-                      outline: "none",
-                      background: "transparent",
-                      color: "oklch(0.22 0.02 245)",
-                      boxSizing: "border-box",
-                    }}
+                    className={cn(authFieldClassName, "pr-11")}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "oklch(0.5 0.02 245)",
-                      padding: "2px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+                    className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
 
-              {mode === "signup" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label
-                    htmlFor="auth-confirm-password"
-                    style={{ fontSize: "0.875rem", fontWeight: 500, color: "oklch(0.22 0.02 245)" }}
-                  >
+              {mode === "signup" ? (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="auth-confirm-password" className="text-sm font-medium text-foreground">
                     Confirm Password
                   </label>
-                  <div style={{ position: "relative" }}>
+                  <div className="relative">
                     <Lock
                       size={16}
-                      style={{
-                        position: "absolute",
-                        left: "12px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: "oklch(0.5 0.02 245)",
-                        pointerEvents: "none",
-                        flexShrink: 0,
-                      }}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
                     />
                     <input
                       id="auth-confirm-password"
@@ -577,150 +352,60 @@ export function AuthForm() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter password"
-                      style={{
-                        width: "100%",
-                        height: "42px",
-                        paddingLeft: "40px",
-                        paddingRight: "44px",
-                        paddingTop: "0",
-                        paddingBottom: "0",
-                        fontSize: "0.875rem",
-                        border: "1px solid oklch(0.9 0.02 230)",
-                        borderRadius: "8px",
-                        outline: "none",
-                        background: "transparent",
-                        color: "oklch(0.22 0.02 245)",
-                        boxSizing: "border-box",
-                      }}
+                      className={cn(authFieldClassName, "pr-11")}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((v) => !v)}
                       aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                      style={{
-                        position: "absolute",
-                        right: "12px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "oklch(0.5 0.02 245)",
-                        padding: "2px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                      className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground"
                     >
                       {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {error && (
+              {error ? (
                 <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "10px",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid oklch(0.577 0.245 27.325 / 0.3)",
-                    background: "oklch(0.577 0.245 27.325 / 0.08)",
-                    color: "oklch(0.5 0.2 27)",
-                    fontSize: "0.875rem",
-                  }}
+                  className="flex gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+                  role="alert"
                 >
-                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
                   <span>{error}</span>
                 </div>
-              )}
+              ) : null}
 
-              {message && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "10px",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid #bbf7d0",
-                    background: "#f0fdf4",
-                    color: "#166534",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: "1px", color: "#16a34a" }} />
+              {message ? (
+                <div className="flex gap-2.5 rounded-lg border border-emerald-600/25 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200">
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
                   <span>{message}</span>
                 </div>
-              )}
+              ) : null}
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !supabase}
-                style={{
-                  width: "100%",
-                  height: "42px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: isSubmitting || !supabase ? "oklch(0.75 0.1 244)" : "oklch(0.61 0.18 244)",
-                  color: "white",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  cursor: isSubmitting || !supabase ? "not-allowed" : "pointer",
-                  transition: "background 0.15s ease, transform 0.1s ease",
-                  letterSpacing: "-0.01em",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSubmitting && supabase) {
-                    e.currentTarget.style.background = "oklch(0.54 0.18 244)"
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSubmitting && supabase) {
-                    e.currentTarget.style.background = "oklch(0.61 0.18 244)"
-                  }
-                }}
-              >
+              <Button type="submit" className="h-11 w-full" disabled={isSubmitting || !supabase}>
                 {isSubmitting ? (
-                  <span className="auth-loading-wrap">
-                    <Loader2 size={16} className="auth-spin" />
-                    <span className="auth-loading-text">
-                      {mode === "signin" ? "Signing you in" : "Creating your account"}
-                    </span>
-                    <span className="auth-loading-dots" aria-hidden>
-                      <span>.</span>
-                      <span>.</span>
-                      <span>.</span>
-                    </span>
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    {mode === "signin" ? "Signing you in…" : "Creating your account…"}
                   </span>
                 ) : mode === "signin" ? (
                   "Sign In"
                 ) : (
                   "Create Account"
                 )}
-              </button>
+              </Button>
             </form>
 
-            <div style={{ marginTop: "auto", paddingTop: "1.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "1rem" }}>
-                <div style={{ flex: 1, height: "1px", background: "oklch(0.9 0.02 230)" }} />
-                <span style={{ fontSize: "0.75rem", color: "oklch(0.5 0.02 245)" }}>or</span>
-                <div style={{ flex: 1, height: "1px", background: "oklch(0.9 0.02 230)" }} />
+            <div className="mt-auto pt-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="h-px flex-1 bg-border" />
               </div>
-              <p style={{ textAlign: "center", fontSize: "0.875rem", color: "oklch(0.5 0.02 245)" }}>
+              <p className="text-center text-sm text-muted-foreground">
                 Back to{" "}
-                <Link
-                  href="/try-on"
-                  style={{ color: "oklch(0.61 0.18 244)", fontWeight: 500, textDecoration: "none" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.textDecoration = "underline"
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.textDecoration = "none"
-                  }}
-                >
+                <Link href="/try-on" className="font-medium text-primary underline-offset-4 hover:underline">
                   Try-On
                 </Link>
               </p>
@@ -728,62 +413,6 @@ export function AuthForm() {
           </div>
         </div>
       </div>
-
-      <style>{`
-        @media (min-width: 1024px) {
-          .lg-two-col {
-            grid-template-columns: 420px 1fr !important;
-          }
-          .auth-left-panel {
-            display: flex !important;
-          }
-        }
-        @media (max-width: 1023px) {
-          .auth-left-panel {
-            display: none !important;
-          }
-        }
-        #auth-name::placeholder,
-        #auth-email::placeholder,
-        #auth-password::placeholder,
-        #auth-confirm-password::placeholder {
-          color: oklch(0.65 0.015 245);
-        }
-        #auth-name:focus,
-        #auth-email:focus,
-        #auth-password:focus,
-        #auth-confirm-password:focus {
-          border-color: oklch(0.61 0.18 244);
-          box-shadow: 0 0 0 3px oklch(0.61 0.18 244 / 0.15);
-        }
-        .auth-loading-wrap {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-        .auth-spin {
-          animation: auth-spin 0.9s linear infinite;
-        }
-        .auth-loading-dots span {
-          animation: auth-dot 1.2s ease-in-out infinite;
-          display: inline-block;
-        }
-        .auth-loading-dots span:nth-child(2) {
-          animation-delay: 0.15s;
-        }
-        .auth-loading-dots span:nth-child(3) {
-          animation-delay: 0.3s;
-        }
-        @keyframes auth-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes auth-dot {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
-          40% { transform: translateY(-2px); opacity: 1; }
-        }
-      `}</style>
     </div>
   )
 }

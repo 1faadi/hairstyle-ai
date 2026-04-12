@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import { AuthGreetingCard } from "@/components/shared/AuthGreetingCard"
+import { ThemeProvider } from "@/components/theme-provider"
 import { SITE_LOGO_PATH } from "@/lib/site"
 import "./globals.css"
 
@@ -58,12 +59,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full overflow-x-hidden antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full overflow-x-hidden antialiased`}>
       <body className="min-h-full min-w-0 flex flex-col overflow-x-hidden">
-        <Suspense fallback={null}>
-          <AuthGreetingCard />
-        </Suspense>
-        {children}
+        <ThemeProvider>
+          <Suspense fallback={null}>
+            <AuthGreetingCard />
+          </Suspense>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )
