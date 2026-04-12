@@ -1,15 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
-import { Menu, Scissors, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+import { SITE_LOGO_PATH, SITE_SHORT_NAME } from "@/lib/site"
+import { cn } from "@/lib/utils"
 
 const navLinks = [
-  { label: "AI Hair", href: "#features" },
+  { label: "What it is", href: "#what-is" },
   { label: "AI Nail Art", href: "/nail-art" },
-  { label: "How It Works", href: "#how-it-works" },
+  { label: "How it works", href: "#how-it-works" },
   { label: "FAQ", href: "#faq" },
 ]
 
@@ -44,30 +47,45 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/75 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-sm">
-            <Scissors className="size-4" />
-          </div>
-          <span className="text-base font-semibold tracking-tight">AI Hair</span>
+    <header className="sticky top-0 z-50 w-full min-w-0 border-b border-border/80 bg-background/75 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-8">
+        <Link
+          href="/"
+          className="flex min-w-0 max-w-[min(100%,18rem)] flex-1 items-center gap-2 sm:max-w-none sm:flex-none lg:max-w-[min(100%,20rem)]"
+        >
+          <span className="relative size-9 shrink-0 overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
+            <Image
+              src={SITE_LOGO_PATH}
+              alt={SITE_SHORT_NAME}
+              width={36}
+              height={36}
+              className="object-cover"
+              priority
+            />
+          </span>
+          <span className="truncate text-sm font-semibold leading-tight tracking-tight sm:text-base">
+            {SITE_SHORT_NAME}
+          </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
+        <nav className="hidden min-w-0 flex-1 justify-center lg:flex">
+          <div className="flex items-center gap-0.5 xl:gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="whitespace-nowrap rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground xl:px-3"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </nav>
 
-        <div className="flex items-center gap-2">
+        {/* Desktop / large tablet only: inline actions stay off small screens to avoid overflow */}
+        <div className="hidden min-w-0 shrink-0 items-center gap-1.5 lg:flex xl:gap-2">
           {isAuthenticated && userName ? (
-            <span className="hidden rounded-md border border-border bg-secondary px-3 py-1 text-sm font-medium text-foreground sm:inline-flex">
+            <span className="max-w-[8rem] truncate rounded-md border border-border bg-secondary px-2 py-1 text-xs font-medium text-foreground xl:max-w-[12rem] xl:px-3 xl:text-sm">
               {userName}
             </span>
           ) : (
@@ -76,78 +94,82 @@ export function Header() {
               className={buttonVariants({
                 variant: "outline",
                 size: "sm",
-                className: "hidden sm:inline-flex",
+                className: "shrink-0",
               })}
             >
               Sign In
             </Link>
           )}
-          <Link
-            href="/try-on"
-            className={buttonVariants({
-              size: "sm",
-              className: "hidden sm:inline-flex",
-            })}
-          >
-            Try AI Hair
+          <Link href="/try-on" className={buttonVariants({ size: "sm", className: "shrink-0 whitespace-nowrap" })}>
+            Try hairstyle AI
           </Link>
           <Link
             href="/nail-art"
             className={buttonVariants({
               variant: "outline",
               size: "sm",
-              className: "hidden sm:inline-flex",
+              className: "shrink-0 whitespace-nowrap",
             })}
           >
             Try AI Nail Art
           </Link>
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <button
               type="button"
               onClick={handleSignOut}
               className={buttonVariants({
                 variant: "outline",
                 size: "sm",
-                className: "hidden sm:inline-flex",
+                className: "shrink-0",
               })}
             >
               Sign Out
             </button>
-          )}
-          <button
-            type="button"
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
-            onClick={() => setMobileOpen((value) => !value)}
-            aria-label="Toggle navigation"
-          >
-            {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
+          ) : null}
         </div>
+
+        <button
+          type="button"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "icon" }),
+            "shrink-0 lg:hidden",
+            "size-10 touch-manipulation"
+          )}
+          onClick={() => setMobileOpen((value) => !value)}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-nav-panel"
+          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+        >
+          {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
       </div>
 
-      {mobileOpen && (
-        <div className="border-t border-border/80 bg-background/95 px-4 py-4 lg:hidden">
-          <nav className="space-y-1">
+      {mobileOpen ? (
+        <div
+          id="mobile-nav-panel"
+          className="border-t border-border/80 bg-background/98 px-4 py-4 shadow-lg lg:hidden"
+        >
+          <nav className="space-y-1" aria-label="Mobile">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
-                className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:bg-secondary/80"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 grid gap-2">
             {isAuthenticated && userName ? (
-              <span className="flex flex-1 items-center justify-center rounded-md border border-border bg-secondary px-2 text-sm font-medium text-foreground">
+              <span className="rounded-lg border border-border bg-secondary px-3 py-2 text-center text-sm font-medium text-foreground">
                 {userName}
               </span>
             ) : (
               <Link
                 href="/auth?next=/try-on"
-                className={buttonVariants({ variant: "outline", size: "sm", className: "flex-1" })}
+                className={buttonVariants({ variant: "outline", size: "default", className: "w-full justify-center" })}
                 onClick={() => setMobileOpen(false)}
               >
                 Sign In
@@ -155,34 +177,38 @@ export function Header() {
             )}
             <Link
               href="/try-on"
-              className={buttonVariants({ size: "sm", className: "flex-1" })}
+              className={buttonVariants({ size: "default", className: "w-full justify-center" })}
               onClick={() => setMobileOpen(false)}
             >
-              Try AI Hair
+              Try hairstyle AI
             </Link>
-          </div>
-          <Link
-            href="/nail-art"
-            className={buttonVariants({ variant: "outline", size: "sm", className: "mt-2 w-full" })}
-            onClick={() => setMobileOpen(false)}
-          >
-            Try AI Nail Art
-          </Link>
-          {isAuthenticated && (
-            <button
-              type="button"
-              onClick={handleSignOut}
+            <Link
+              href="/nail-art"
               className={buttonVariants({
                 variant: "outline",
-                size: "sm",
-                className: "mt-2 w-full",
+                size: "default",
+                className: "w-full justify-center",
               })}
+              onClick={() => setMobileOpen(false)}
             >
-              Sign Out
-            </button>
-          )}
+              Try AI Nail Art
+            </Link>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "default",
+                  className: "w-full justify-center",
+                })}
+              >
+                Sign Out
+              </button>
+            ) : null}
+          </div>
         </div>
-      )}
+      ) : null}
     </header>
   )
 }

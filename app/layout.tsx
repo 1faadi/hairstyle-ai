@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import { AuthGreetingCard } from "@/components/shared/AuthGreetingCard"
+import { SITE_LOGO_PATH } from "@/lib/site"
 import "./globals.css"
 
 const inter = Inter({
@@ -9,29 +10,45 @@ const inter = Inter({
   subsets: ["latin"],
 })
 
+const SITE_TITLE = "Free AI Hairstyle Changer | Try 150+ Hairstyles Online in 2026"
+const SITE_DESCRIPTION =
+  "Try 150+ AI hairstyles and colours instantly online for men, women, and kids. You can preview your new look before the salon with our free virtual hairstyle tool."
+
+const siteUrl =
+  typeof process.env.NEXT_PUBLIC_SITE_URL === "string" && process.env.NEXT_PUBLIC_SITE_URL.trim() !== ""
+    ? process.env.NEXT_PUBLIC_SITE_URL.trim()
+    : "https://hairstyleai.ai"
+
 export const metadata: Metadata = {
-  title: "AI Hair - Try On Any Hairstyle Instantly",
-  description:
-    "Transform your look in seconds - upload a photo and preview modern hairstyles with realistic AI results.",
+  metadataBase: new URL(siteUrl),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   keywords: [
-    "hairstyle AI",
-    "virtual hairstyle try on",
-    "AI hair changer",
-    "hairstyle simulator",
+    "AI hairstyle changer",
+    "free virtual hairstyle",
+    "hairstyle try on online",
+    "AI hair color preview",
     "virtual haircut",
+    "men women kids hairstyles",
   ],
+  icons: {
+    icon: [{ url: SITE_LOGO_PATH, type: "image/png" }],
+    apple: [{ url: SITE_LOGO_PATH, type: "image/png" }],
+  },
   openGraph: {
-    title: "AI Hair - Try On Any Hairstyle Instantly",
-    description: "Transform your look in seconds with realistic AI hairstyle previews.",
-    url: "https://hairstyleai.ai",
-    siteName: "AI Hair",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: siteUrl,
+    siteName: "AI Hairstyle Changer",
     locale: "en_US",
     type: "website",
+    images: [{ url: SITE_LOGO_PATH, width: 512, height: 512, alt: "AI Hairstyle Changer logo" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Hair - Try On Any Hairstyle Instantly",
-    description: "Transform your look in seconds with AI-powered hairstyle try-on.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SITE_LOGO_PATH],
   },
 }
 
@@ -41,8 +58,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className={`${inter.variable} h-full overflow-x-hidden antialiased`}>
+      <body className="min-h-full min-w-0 flex flex-col overflow-x-hidden">
         <Suspense fallback={null}>
           <AuthGreetingCard />
         </Suspense>

@@ -1,94 +1,100 @@
 "use client"
 
+import { HelpCircle } from "lucide-react"
+import { LandingSectionHeader } from "@/components/landing/LandingSectionHeader"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Card } from "@/components/ui/card"
 
 const faqs = [
   {
-    question: "How accurate is the hairstyle AI?",
+    question: "Is it hairstyling for both men and women?",
     answer:
-      "Our AI delivers highly realistic results by analyzing your facial structure, skin tone, and existing hair. It's trained on 500+ professional styles and produces photorealistic previews that closely reflect how the hairstyle will look on you.",
+      "Yes, we offer hundreds of hairstyles for men and women within our virtual hairstyle tool. There are short ones and long ones, pixie cuts to fade and curls to layers, classic styles to trendy.",
   },
   {
-    question: "What types of photos work best?",
+    question: "Is my photo data safe with your hairstyle AI?",
     answer:
-      "A clear, well-lit front-facing photo works best. Avoid heavy filters, sunglasses, or hats. Natural lighting with your face fully visible gives the most accurate results.",
+      "Yes, we take privacy seriously. All photos are processed in a secure, isolated environment and automatically deleted after 24 hours from our servers. We do not save, share, or use your images for training.",
   },
   {
-    question: "Is my photo data safe?",
+    question: "How accurate is the hairstyle AI actually?",
     answer:
-      "Absolutely. All photos are securely encrypted and processed in real-time. We do not store, share, or use your photos for any training purposes. Images are automatically deleted after processing.",
+      "Results are designed to look highly realistic and work well as a planning guide—but your natural texture, thickness, and styling can still change the final look. We recommend sharing the AI preview with your stylist.",
   },
   {
-    question: "Can I try multiple hairstyles?",
+    question: "Can I test several hairstyles with a single photo?",
     answer:
-      "Yes. Guests can try up to 3 generations total per IP address, shared across AI Hair and AI Nail Art. Sign in to continue with unlimited try-ons.",
+      "Yes. Once you upload a photo, you can try many cuts, lengths, and colours on the same image. Guests share a limited number of free generations per IP address across AI Hairstyle and AI Nail Art; sign in for additional access.",
   },
   {
-    question: "Do you offer styles for men and women?",
+    question: "What is the cost of using the AI hairstyle?",
     answer:
-      "Yes, we have an extensive collection for both men and women — including short cuts, long styles, braids, color options, fades, undercuts, and much more.",
+      "You can start with free try-outs. Guests receive a limited number of generations per IP (shared with AI Nail Art). Creating an account unlocks more consistent access; optional paid credits may apply for heavy use—see the app for current details.",
   },
   {
-    question: "How much does it cost?",
+    question: "What types of photos work best with the hairstyle AI?",
     answer:
-      "You can start free with 3 guest tries per IP (shared across AI Hair + AI Nail Art). Create an account to remove the guest limit.",
+      "Use a clear front-facing photo with good lighting. Avoid sunglasses, hats, or anything covering your hairline. The AI analyses your face shape and current hairstyle and works best with a clear view of both.",
   },
   {
-    question: "Can I use it on mobile?",
+    question: "Is the hairstyle AI mobile-friendly?",
     answer:
-      "Yes! AI Hair is fully mobile-optimized and works in any modern browser on iOS and Android. No app download required.",
+      "Yes. Our virtual hairstyle changer works on smartphones, tablets, and computers. Uploading photos and browsing styles is optimised for mobile devices.",
   },
   {
-    question: "What if I don't like the results?",
+    question: "What if I don't like the hairstyle I got from AI?",
     answer:
-      "We recommend trying a few different angles and lighting conditions for best results. If you're not satisfied, our support team is happy to help — reach us at support@hairstyleai.ai.",
+      "You can mix and match styles until you find a look you love—there are many options to explore. If you need help with your account, reach us at support@hairstyleai.ai.",
   },
-]
+] as const
 
 export function FAQ() {
   return (
-    <section id="faq" className="py-20 md:py-28 bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-          {/* Left: Header */}
-          <div className="sticky top-24">
-            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">FAQ</p>
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
-              Frequently asked questions
-            </h2>
-            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              Everything you need to know about AI Hair. Can&apos;t find the answer? Reach us at{" "}
-              <a
-                href="mailto:support@hairstyleai.ai"
-                className="text-primary hover:underline"
-              >
-                support@hairstyleai.ai
-              </a>
-            </p>
+    <section id="faq" className="scroll-mt-24 border-t border-border/60 bg-secondary/25 py-20 md:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="lg:sticky lg:top-28">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              <HelpCircle className="size-3.5" aria-hidden />
+              We&apos;re here to help
+            </div>
+            <LandingSectionHeader
+              title="Frequently Asked Questions"
+              description={
+                <>
+                  Common questions about the AI Hairstyle Changer. Can&apos;t find the answer? Email{" "}
+                  <a href="mailto:support@hairstyleai.ai" className="font-medium text-primary underline-offset-4 hover:underline">
+                    support@hairstyleai.ai
+                  </a>
+                  .
+                </>
+              }
+            />
           </div>
 
-          {/* Right: Accordion */}
-          <Accordion className="w-full space-y-2">
-            {faqs.map((faq, i) => (
-              <AccordionItem
-                key={i}
-                value={i}
-                className="border border-border rounded-lg px-4 data-[panel-open]:bg-secondary/30"
-              >
-                <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline py-4">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          <Card className="border-border/80 p-2 shadow-lg ring-1 ring-border/60">
+            <Accordion className="w-full gap-1">
+              {faqs.map((faq, i) => (
+                <AccordionItem
+                  key={faq.question}
+                  value={`faq-${i}`}
+                  className="rounded-xl border border-transparent px-3 data-open:border-border data-open:bg-secondary/40"
+                >
+                  <AccordionTrigger className="py-4 text-left text-sm font-medium text-foreground hover:no-underline">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4 text-sm leading-relaxed text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </Card>
         </div>
       </div>
     </section>

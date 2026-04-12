@@ -1,5 +1,6 @@
+import Image from "next/image"
 import Link from "next/link"
-import { Scissors } from "lucide-react"
+import { SITE_LOGO_PATH, SITE_SHORT_NAME } from "@/lib/site"
 
 const socialLinks = [
   { label: "Instagram", href: "https://instagram.com" },
@@ -9,11 +10,11 @@ const socialLinks = [
 ]
 
 const productLinks = [
-  { label: "AI Hair", href: "#features" },
+  { label: "What it is", href: "#what-is" },
   { label: "AI Nail Art", href: "/nail-art" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Try On", href: "/try-on" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "How it works", href: "#how-it-works" },
+  { label: "Try on", href: "/try-on" },
+  { label: "Top styles", href: "#styles-2026" },
 ]
 
 const footerLinks = [
@@ -23,18 +24,24 @@ const footerLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <footer className="min-w-0 overflow-x-clip border-t border-border bg-background">
+      <div className="mx-auto min-w-0 max-w-7xl px-3 py-10 sm:px-4 sm:py-12 lg:px-8">
         <div className="grid gap-10 md:grid-cols-3">
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex w-fit items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-white">
-                <Scissors className="size-4" />
-              </div>
-              <span className="text-base font-semibold">AI Hair</span>
+              <span className="relative size-9 shrink-0 overflow-hidden rounded-xl border border-border bg-card">
+                <Image
+                  src={SITE_LOGO_PATH}
+                  alt={SITE_SHORT_NAME}
+                  width={36}
+                  height={36}
+                  className="object-cover"
+                />
+              </span>
+              <span className="text-base font-semibold">{SITE_SHORT_NAME}</span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              AI hairstyle previews designed to help you choose your next look with confidence.
+              Preview 150+ AI hairstyles and colours before the salon—free virtual hairstyle try-on in your browser.
             </p>
             <div className="flex items-center gap-2">
               {socialLinks.map(({ label, href }) => (
@@ -83,7 +90,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
-          <p className="text-xs text-muted-foreground">© 2026 AI Hair. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 {SITE_SHORT_NAME}. All rights reserved.</p>
           <div className="flex items-center gap-4">
             {footerLinks.map((link) => (
               <Link
