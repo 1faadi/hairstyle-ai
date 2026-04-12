@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -11,13 +12,13 @@ import {
   Lock,
   Loader2,
   Mail,
-  Scissors,
   Sparkles,
   User,
 } from "lucide-react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { SITE_LOGO_PATH, SITE_SHORT_NAME } from "@/lib/site"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { cn } from "@/lib/utils"
 
@@ -178,11 +179,16 @@ export function AuthForm() {
               aria-hidden
             />
 
-            <div className="relative z-10 flex items-center gap-2.5">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-white/20 backdrop-blur-md">
-                <Scissors size={18} />
-              </div>
-              <span className="text-lg font-semibold tracking-tight">AI Hair</span>
+            <div className="relative z-10 flex items-center gap-3">
+              <Image
+                src={SITE_LOGO_PATH}
+                alt={SITE_SHORT_NAME}
+                width={72}
+                height={72}
+                priority
+                className="size-[72px] shrink-0 rounded-2xl border border-white/25 bg-white/10 object-cover shadow-md"
+              />
+              <span className="text-lg font-semibold tracking-tight">{SITE_SHORT_NAME}</span>
             </div>
 
             <div className="relative z-10">
@@ -218,6 +224,15 @@ export function AuthForm() {
           </div>
 
           <div className="flex flex-col bg-card p-8 sm:p-10">
+            <div className="mb-6 flex justify-center lg:hidden">
+              <Image
+                src={SITE_LOGO_PATH}
+                alt={SITE_SHORT_NAME}
+                width={80}
+                height={80}
+                className="size-20 rounded-2xl border border-border bg-muted/30 object-cover shadow-sm"
+              />
+            </div>
             <div className="mb-7">
               <h2 className="mb-1 text-2xl font-bold tracking-tight text-foreground">
                 {mode === "signin" ? "Welcome back" : "Create an account"}

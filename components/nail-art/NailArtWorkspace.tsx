@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
   ArrowLeft,
@@ -17,6 +17,8 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { HairstyleTaskStatus } from "@/lib/hairstyle/constants"
+import { createBearerAuthHeaders } from "@/lib/hairstyle/auth-headers"
+import { getTaskPollDelayMs } from "@/lib/hairstyle/poll-delay"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import type {
   QuotaSnapshot,
@@ -24,7 +26,6 @@ import type {
   TaskStatusResponse,
 } from "@/lib/hairstyle/types"
 
-const POLL_INTERVAL_MS = 2500
 const MAX_POLL_ATTEMPTS = 72
 
 function sleep(ms: number) {
@@ -97,10 +98,10 @@ export function NailArtWorkspace() {
     return () => listener.subscription.unsubscribe()
   }, [supabase])
 
-  function authHeaders(): HeadersInit {
-    if (!accessToken) return {}
-    return { Authorization: `Bearer ${accessToken}` }
-  }
+  const authHeaders = useCallback(
+    (): HeadersInit => createBearerAuthHeaders(accessToken),
+    [accessToken]
+  )
 
   useEffect(() => {
     let canceled = false
@@ -109,15 +110,16 @@ export function NailArtWorkspace() {
       .then((data: { quota?: QuotaSnapshot } | null) => {
         if (!canceled && data?.quota) setQuota(data.quota)
       })
-      .catch(() => {
-        // Non-critical.
+      .catch((err: unknown) => {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[NailArtWorkspace] Quota fetch failed", err)
+        }
       })
 
     return () => {
       canceled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken])
+  }, [authHeaders])
 
   useEffect(() => {
     const preview = createObjectPreview(targetFile)
@@ -164,7 +166,7 @@ export function NailArtWorkspace() {
         return
       }
 
-      await sleep(POLL_INTERVAL_MS)
+      await sleep(getTaskPollDelayMs(attempt))
     }
 
     throw new Error("Generation timed out. Please try again.")

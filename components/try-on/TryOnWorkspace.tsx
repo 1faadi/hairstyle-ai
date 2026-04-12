@@ -2,19 +2,19 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
   CloudUpload,
-  Download,
   Loader2,
   Upload,
   Wand2,
 } from "lucide-react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
+import { TryOnResultPreview } from "@/components/try-on/TryOnResultPreview"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -26,11 +26,12 @@ import type {
   TaskStatusResponse,
 } from "@/lib/hairstyle/types"
 import { AILAB_PRESET_CATALOG } from "@/lib/hairstyle/ailab-presets"
+import { createBearerAuthHeaders } from "@/lib/hairstyle/auth-headers"
+import { getTaskPollDelayMs } from "@/lib/hairstyle/poll-delay"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 
 const TARGET_UPLOAD_INPUT_ID = "try-on-target-upload"
 
-const POLL_INTERVAL_MS = 2500
 const MAX_POLL_ATTEMPTS = 72
 
 const LOCAL_PRESET_SHELLS: HairstylePreset[] = AILAB_PRESET_CATALOG.map((item) => ({
@@ -212,23 +213,28 @@ export function TryOnWorkspace() {
     return () => listener.subscription.unsubscribe()
   }, [supabase])
 
-  function authHeaders(): HeadersInit {
-    if (!accessToken) return {}
-    return { Authorization: `Bearer ${accessToken}` }
-  }
+  const authHeaders = useCallback(
+    (): HeadersInit => createBearerAuthHeaders(accessToken),
+    [accessToken]
+  )
 
   // Load quota on mount (and whenever auth state changes)
   useEffect(() => {
     let canceled = false
     fetch("/api/hairstyle/quota", { cache: "no-store", headers: authHeaders() })
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => (r.ok ? r.json() : null))
       .then((data: { quota?: QuotaSnapshot } | null) => {
         if (!canceled && data?.quota) setQuota(data.quota)
       })
-      .catch(() => {/* non-critical */})
-    return () => { canceled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken])
+      .catch((err: unknown) => {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[TryOnWorkspace] Quota fetch failed", err)
+        }
+      })
+    return () => {
+      canceled = true
+    }
+  }, [authHeaders])
 
   const selectedPreset = useMemo(
     () => presets.find((preset) => preset.id === selectedPresetId) ?? null,
@@ -376,7 +382,7 @@ export function TryOnWorkspace() {
         return
       }
 
-      await sleep(POLL_INTERVAL_MS)
+      await sleep(getTaskPollDelayMs(attempt))
     }
 
     throw new Error("Generation timed out. Please try again.")
@@ -724,6 +730,8 @@ export function TryOnWorkspace() {
                                 <img
                                   src={preset.thumbnailUrl as string}
                                   alt={preset.name}
+                                  loading="lazy"
+                                  decoding="async"
                                   className={cn(
                                     "h-24 w-full object-cover transition-opacity duration-200",
                                     isThumbnailLoaded ? "opacity-100" : "opacity-0"
@@ -800,6 +808,8 @@ export function TryOnWorkspace() {
                       <img
                         src={customSourcePreview}
                         alt="Custom hairstyle reference preview"
+                        loading="lazy"
+                        decoding="async"
                         className="h-32 w-full rounded-lg border border-border object-cover"
                       />
                     ) : (
@@ -958,61 +968,7 @@ export function TryOnWorkspace() {
           </Card>
         </div>
 
-        <Card className="min-w-0 border-border/70 bg-card/90">
-          <CardHeader>
-            <CardTitle className="text-2xl">Result preview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="min-w-0 space-y-2">
-                <p className="text-sm font-medium">Before</p>
-                <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
-                  {targetPreview ? (
-                    <img
-                      src={targetPreview}
-                      alt="Uploaded target preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                      Upload your photo to preview it here.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="min-w-0 space-y-2">
-                <p className="text-sm font-medium">After</p>
-                <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
-                  {resultUrl ? (
-                    <img
-                      src={resultUrl}
-                      alt="Generated hairstyle preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                      Generated result appears here.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {resultUrl ? (
-              <a
-                href={`${resultUrl}&download=1`}
-                className={buttonVariants({
-                  size: "lg",
-                  className: "h-11 w-full gap-2",
-                })}
-              >
-                <Download className="size-4" />
-                Download Result
-              </a>
-            ) : null}
-          </CardContent>
-        </Card>
+        <TryOnResultPreview targetPreview={targetPreview} resultUrl={resultUrl} />
       </main>
     </div>
   )

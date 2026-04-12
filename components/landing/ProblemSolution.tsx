@@ -51,29 +51,21 @@ export function ProblemSolution() {
           </div>
 
           {pairs.map(({ problem, solution }) => (
-            <>
-              {/* Problem card */}
-              <div
-                key={`problem-${problem}`}
-                className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 transition-colors hover:bg-red-100/50 dark:border-red-900/40 dark:bg-red-950/35 dark:hover:bg-red-950/50"
-              >
+            <div key={problem} className="contents">
+              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 transition-colors hover:bg-red-100/50 dark:border-red-900/40 dark:bg-red-950/35 dark:hover:bg-red-950/50">
                 <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/60">
                   <X className="size-3.5 text-red-600 dark:text-red-400" />
                 </div>
                 <p className="text-sm font-medium text-foreground">{problem}</p>
               </div>
 
-              {/* Solution card */}
-              <div
-                key={`solution-${solution}`}
-                className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 transition-colors hover:bg-green-100/50 dark:border-green-900/40 dark:bg-green-950/35 dark:hover:bg-green-950/50"
-              >
+              <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 transition-colors hover:bg-green-100/50 dark:border-green-900/40 dark:bg-green-950/35 dark:hover:bg-green-950/50">
                 <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/60">
                   <Check className="size-3.5 text-green-600 dark:text-green-400" />
                 </div>
                 <p className="text-sm font-medium text-foreground">{solution}</p>
               </div>
-            </>
+            </div>
           ))}
         </div>
       </div>
