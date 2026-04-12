@@ -7,6 +7,7 @@ import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
+  CloudUpload,
   Download,
   Loader2,
   Upload,
@@ -16,7 +17,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import type { HairstyleTaskStatus } from "@/lib/hairstyle/constants"
+import { MAX_UPLOAD_BYTES, type HairstyleTaskStatus } from "@/lib/hairstyle/constants"
 import type {
   HairstylePreset,
   QuotaSnapshot,
@@ -25,6 +26,8 @@ import type {
 } from "@/lib/hairstyle/types"
 import { AILAB_PRESET_CATALOG } from "@/lib/hairstyle/ailab-presets"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+
+const TARGET_UPLOAD_INPUT_ID = "try-on-target-upload"
 
 const POLL_INTERVAL_MS = 2500
 const MAX_POLL_ATTEMPTS = 72
@@ -116,6 +119,47 @@ function getReadableStatus(status: HairstyleTaskStatus | null): string {
   }
 }
 
+const PRESET_CATEGORY_IDS = ["all", "short", "medium", "long", "curly", "straight"] as const
+
+type PresetCategoryId = (typeof PRESET_CATEGORY_IDS)[number]
+
+/** Client-side UX filter only — matches preset names / API style keys to category chips. */
+function presetMatchesCategory(preset: HairstylePreset, category: PresetCategoryId): boolean {
+  if (category === "all") return true
+  const text = `${preset.name} ${preset.hairStyle}`.toLowerCase()
+
+  switch (category) {
+    case "short":
+      return /\b(short|pixie|buzz|fade|bowl|crop|spiky|faux|comb|two block|blunt|pageboy|pigtail|space bun|stacked|graduated|twintail|neat bob|pixie)\b/i.test(
+        text
+      )
+    case "long":
+      return /\b(long|ponytail|braid|dread|man bun|hime|curtain|fishtail|cornrow|box braid|locks|tail|length|afro)\b/i.test(
+        text
+      )
+    case "curly":
+      return /\b(curly|afro|wave|wavy|perm|shag|spiral|curl|loose)\b/i.test(text)
+    case "straight":
+      return /\b(straight|sleek|slick|smooth)\b/i.test(text)
+    case "medium":
+      return /\b(bob|shoulder|lob|chignon|updo|fringe|layer|french|messy|middle|side part|comb-?over|wavy french|ballerina|finger)\b/i.test(
+        text
+      )
+    default:
+      return true
+  }
+}
+
+function validateTargetImageFile(file: File): string | null {
+  if (file.type !== "image/jpeg" && file.type !== "image/png") {
+    return "Please use a JPG or PNG image."
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return "Image must be 5MB or smaller."
+  }
+  return null
+}
+
 export function TryOnWorkspace() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
   const [accessToken, setAccessToken] = useState<string | null>(null)
@@ -143,8 +187,14 @@ export function TryOnWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [resultUrl, setResultUrl] = useState<string | null>(null)
+  const [presetCategory, setPresetCategory] = useState<PresetCategoryId>("all")
+  const [targetUploadError, setTargetUploadError] = useState<string | null>(null)
+  const [customUploadError, setCustomUploadError] = useState<string | null>(null)
+  const [isDraggingTarget, setIsDraggingTarget] = useState(false)
 
   const pollTokenRef = useRef(0)
+  const targetFileInputRef = useRef<HTMLInputElement>(null)
+  const customFileInputRef = useRef<HTMLInputElement>(null)
 
   // Sync Supabase session token so API calls can authenticate the user
   useEffect(() => {
@@ -188,13 +238,46 @@ export function TryOnWorkspace() {
     return presets.filter((preset) => preset.gender === presetGender)
   }, [presets, presetGender])
 
+  const displayPresets = useMemo(() => {
+    return filteredPresets.filter((preset) => presetMatchesCategory(preset, presetCategory))
+  }, [filteredPresets, presetCategory])
+
   useEffect(() => {
     if (filteredPresets.length === 0) return
-    const isSelectedVisible = filteredPresets.some((preset) => preset.id === selectedPresetId)
+    const pool = displayPresets.length > 0 ? displayPresets : filteredPresets
+    const isSelectedVisible = pool.some((preset) => preset.id === selectedPresetId)
     if (!isSelectedVisible) {
-      setSelectedPresetId(filteredPresets[0].id)
+      setSelectedPresetId(pool[0].id)
     }
-  }, [filteredPresets, selectedPresetId])
+  }, [filteredPresets, displayPresets, selectedPresetId])
+
+  function assignTargetFile(file: File | null): void {
+    setTargetUploadError(null)
+    if (!file) {
+      setTargetFile(null)
+      return
+    }
+    const err = validateTargetImageFile(file)
+    if (err) {
+      setTargetUploadError(err)
+      return
+    }
+    setTargetFile(file)
+  }
+
+  function assignCustomFile(file: File | null): void {
+    setCustomUploadError(null)
+    if (!file) {
+      setCustomSourceFile(null)
+      return
+    }
+    const err = validateTargetImageFile(file)
+    if (err) {
+      setCustomUploadError(err)
+      return
+    }
+    setCustomSourceFile(file)
+  }
 
   useEffect(() => {
     let canceled = false
@@ -377,22 +460,22 @@ export function TryOnWorkspace() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/10 to-background">
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="flex items-center justify-between">
+      <main className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <Link
             href="/"
             className={buttonVariants({
               variant: "outline",
               size: "sm",
-              className: "gap-2",
+              className: "gap-2 shrink-0",
             })}
           >
             <ArrowLeft className="size-4" />
             Back to Home
           </Link>
 
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Supported: JPG and PNG up to 5MB</p>
+          <div className="min-w-0 text-right">
+            <p className="text-xs text-muted-foreground">JPG, PNG up to 5MB</p>
             <p className="text-xs font-medium text-foreground">
               {quota?.mode === "user"
                 ? "Credits: Unlimited"
@@ -402,153 +485,313 @@ export function TryOnWorkspace() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="border-border/70 bg-card/90">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-6">
+          <Card className="min-w-0 border-border/70 bg-card/90 lg:col-span-7">
             <CardHeader>
-              <CardTitle className="text-2xl">Try a New Hairstyle</CardTitle>
+              <CardTitle className="text-2xl">Upload your photo</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold">1. Upload Your Photo</h2>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={(event) => setTargetFile(event.target.files?.[0] ?? null)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
-              </section>
-
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold">2. Choose a Style Preset</h2>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={styleMode === "preset" ? "default" : "outline"}
-                    onClick={() => setStyleMode("preset")}
+            <CardContent className="space-y-3">
+              <input
+                id={TARGET_UPLOAD_INPUT_ID}
+                ref={targetFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="sr-only"
+                onChange={(event) => assignTargetFile(event.target.files?.[0] ?? null)}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    targetFileInputRef.current?.click()
+                  }
+                }}
+                onClick={() => targetFileInputRef.current?.click()}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setIsDraggingTarget(true)
+                }}
+                onDragLeave={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setIsDraggingTarget(false)
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setIsDraggingTarget(false)
+                  const file = event.dataTransfer.files?.[0]
+                  if (file) assignTargetFile(file)
+                }}
+                className={cn(
+                  "relative flex min-h-[min(50vh,22rem)] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+                  isDraggingTarget
+                    ? "border-primary bg-primary/5"
+                    : "border-border/80 bg-secondary/15 hover:border-primary/40 hover:bg-secondary/25",
+                  targetPreview && "border-solid"
+                )}
+              >
+                {targetPreview ? (
+                  <>
+                    <img
+                      src={targetPreview}
+                      alt="Your uploaded portrait preview"
+                      className="absolute inset-0 h-full w-full object-cover opacity-35"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/70" />
+                  </>
+                ) : null}
+                <div className="relative z-10 flex max-w-sm flex-col items-center gap-3">
+                  <CloudUpload className="size-12 text-muted-foreground" aria-hidden />
+                  <p className="text-sm font-medium text-foreground">
+                    Drag and drop your photo here, or tap to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Clear face, good lighting — JPG or PNG, max 5MB
+                  </p>
+                  <span
+                    className={buttonVariants({ size: "default", className: "pointer-events-none mt-1 gap-2" })}
                   >
-                    Presets
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={styleMode === "custom" ? "default" : "outline"}
-                    onClick={() => setStyleMode("custom")}
-                  >
-                    Custom
-                  </Button>
+                    <Upload className="size-4" />
+                    Upload
+                  </span>
                 </div>
-                {presetsLoading && (
-                  <p className="text-sm text-muted-foreground">Loading presets...</p>
-                )}
-                {presetsError && (
-                  <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
-                )}
-                {styleMode === "preset" && presets.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={presetGender === "female" ? "default" : "outline"}
-                      onClick={() => setPresetGender("female")}
-                    >
-                      Women
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={presetGender === "male" ? "default" : "outline"}
-                      onClick={() => setPresetGender("male")}
-                    >
-                      Men
-                    </Button>
-                  </div>
-                )}
-                {styleMode === "preset" && !presetsLoading && presets.length === 0 && (
+              </div>
+              {targetUploadError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {targetUploadError}
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="flex min-h-0 min-w-0 flex-col border-border/70 bg-card/90 lg:col-span-5">
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-2xl">Style &amp; generate</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Pick a preset or bring your own reference, then generate.
+              </p>
+            </CardHeader>
+            <CardContent className="flex min-h-0 flex-1 flex-col gap-5">
+              <div
+                className="inline-flex w-full max-w-full rounded-lg border border-border bg-muted/40 p-1"
+                role="group"
+                aria-label="Style source"
+              >
+                <button
+                  type="button"
+                  onClick={() => setStyleMode("preset")}
+                  className={cn(
+                    "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
+                    styleMode === "preset"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Preset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStyleMode("custom")}
+                  className={cn(
+                    "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
+                    styleMode === "custom"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Custom
+                </button>
+              </div>
+
+              {presetsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading presets...</p>
+              ) : null}
+              {presetsError ? (
+                <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
+              ) : null}
+
+              {styleMode === "preset" && presets.length > 0 ? (
+                <div
+                  className="inline-flex w-full max-w-full rounded-lg border border-border bg-muted/40 p-1"
+                  role="group"
+                  aria-label="Preset gender"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPresetGender("female")}
+                    className={cn(
+                      "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
+                      presetGender === "female"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Women
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPresetGender("male")}
+                    className={cn(
+                      "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
+                      presetGender === "male"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Men
+                  </button>
+                </div>
+              ) : null}
+
+              {styleMode === "preset" && !presetsLoading && presets.length > 0 ? (
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Preset length or type">
+                  {PRESET_CATEGORY_IDS.map((id) => {
+                    const label =
+                      id === "all"
+                        ? "All"
+                        : id.charAt(0).toUpperCase() + id.slice(1)
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setPresetCategory(id)}
+                        className={cn(
+                          "min-h-10 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-9",
+                          presetCategory === id
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+
+              <div className="min-h-0 flex-1 space-y-3">
+                {styleMode === "preset" && !presetsLoading && presets.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No AILab presets available right now.</p>
+                ) : null}
+                {styleMode === "preset" &&
+                !presetsLoading &&
+                presets.length > 0 &&
+                filteredPresets.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No presets available for this filter.</p>
+                ) : null}
+                {styleMode === "preset" &&
+                !presetsLoading &&
+                presets.length > 0 &&
+                filteredPresets.length > 0 &&
+                displayPresets.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No AILab presets available right now.
+                    No presets match this category. Try another chip or choose All.
                   </p>
-                )}
-                {styleMode === "preset" && !presetsLoading && presets.length > 0 && filteredPresets.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No presets available for this filter.
-                  </p>
-                )}
-                {styleMode === "preset" && filteredPresets.length > 0 && (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {filteredPresets.map((preset) => {
-                      const isActive = preset.id === selectedPresetId
-                      const hasThumbnail =
-                        typeof preset.thumbnailUrl === "string" &&
-                        preset.thumbnailUrl.length > 0 &&
-                        !brokenPresetIds.has(preset.id)
-                      const isThumbnailLoaded = loadedPresetIds.has(preset.id)
-                      const showInlineLoader = hasThumbnail && !isThumbnailLoaded
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => setSelectedPresetId(preset.id)}
-                          className={cn(
-                            "overflow-hidden rounded-lg border text-left transition-colors",
-                            isActive
-                              ? "border-primary ring-2 ring-primary/30"
-                              : "border-border hover:border-primary/40"
-                          )}
-                        >
-                          <div className="relative h-24 w-full bg-secondary/35">
-                            {hasThumbnail ? (
-                              <img
-                                src={preset.thumbnailUrl as string}
-                                alt={preset.name}
-                                className={cn(
-                                  "h-24 w-full object-cover transition-opacity duration-200",
-                                  isThumbnailLoaded ? "opacity-100" : "opacity-0"
-                                )}
-                                onLoad={() =>
-                                  setLoadedPresetIds((current) => {
-                                    if (current.has(preset.id)) return current
-                                    const next = new Set(current)
-                                    next.add(preset.id)
-                                    return next
-                                  })
-                                }
-                                onError={() =>
-                                  setBrokenPresetIds((current) => {
-                                    if (current.has(preset.id)) return current
-                                    const next = new Set(current)
-                                    next.add(preset.id)
-                                    return next
-                                  })
-                                }
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
-                                {presetsLoading ? "Loading..." : "No preview"}
-                              </div>
+                ) : null}
+                {styleMode === "preset" && filteredPresets.length > 0 && displayPresets.length > 0 ? (
+                  <div className="max-h-[min(50vh,28rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+                      {displayPresets.map((preset) => {
+                        const isActive = preset.id === selectedPresetId
+                        const hasThumbnail =
+                          typeof preset.thumbnailUrl === "string" &&
+                          preset.thumbnailUrl.length > 0 &&
+                          !brokenPresetIds.has(preset.id)
+                        const isThumbnailLoaded = loadedPresetIds.has(preset.id)
+                        const showInlineLoader = hasThumbnail && !isThumbnailLoaded
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setSelectedPresetId(preset.id)}
+                            className={cn(
+                              "min-w-0 overflow-hidden rounded-lg border text-left transition-colors",
+                              isActive
+                                ? "border-primary ring-2 ring-primary/30"
+                                : "border-border hover:border-primary/40"
                             )}
-                            {showInlineLoader && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-background/45">
-                                <Loader2 className="size-4 animate-spin text-primary" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
-                        </button>
-                      )
-                    })}
+                          >
+                            <div className="relative h-24 w-full bg-secondary/35">
+                              {hasThumbnail ? (
+                                <img
+                                  src={preset.thumbnailUrl as string}
+                                  alt={preset.name}
+                                  className={cn(
+                                    "h-24 w-full object-cover transition-opacity duration-200",
+                                    isThumbnailLoaded ? "opacity-100" : "opacity-0"
+                                  )}
+                                  onLoad={() =>
+                                    setLoadedPresetIds((current) => {
+                                      if (current.has(preset.id)) return current
+                                      const next = new Set(current)
+                                      next.add(preset.id)
+                                      return next
+                                    })
+                                  }
+                                  onError={() =>
+                                    setBrokenPresetIds((current) => {
+                                      if (current.has(preset.id)) return current
+                                      const next = new Set(current)
+                                      next.add(preset.id)
+                                      return next
+                                    })
+                                  }
+                                />
+                              ) : (
+                                <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
+                                  {presetsLoading ? "Loading..." : "No preview"}
+                                </div>
+                              )}
+                              {showInlineLoader ? (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/45">
+                                  <Loader2 className="size-4 animate-spin text-primary" />
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
-                )}
-                {styleMode === "custom" && (
+                ) : null}
+
+                {styleMode === "custom" ? (
                   <div className="space-y-3 rounded-lg border border-border bg-secondary/20 p-3">
                     <input
+                      ref={customFileInputRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(event) =>
-                        setCustomSourceFile(event.target.files?.[0] ?? null)
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                      accept="image/jpeg,image/png"
+                      className="sr-only"
+                      id="try-on-custom-upload"
+                      onChange={(event) => assignCustomFile(event.target.files?.[0] ?? null)}
                     />
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full min-h-11 sm:w-auto sm:min-h-10"
+                        onClick={() => customFileInputRef.current?.click()}
+                      >
+                        <Upload className="size-4" />
+                        Choose reference
+                      </Button>
+                      <label htmlFor="try-on-custom-upload" className="sr-only">
+                        Custom hairstyle reference image
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        JPG or PNG, max 5MB — same limits as your portrait upload.
+                      </p>
+                    </div>
+                    {customUploadError ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {customUploadError}
+                      </p>
+                    ) : null}
                     {customSourcePreview ? (
                       <img
                         src={customSourcePreview}
@@ -561,19 +804,32 @@ export function TryOnWorkspace() {
                       </p>
                     )}
                   </div>
-                )}
-              </section>
+                ) : null}
 
-              {styleMode === "preset" && (
-                <section className="space-y-3">
-                  <h2 className="text-sm font-semibold">3. Optional Hair Color</h2>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {styleMode === "preset" ? (
+                  <p className="text-center text-sm text-muted-foreground">
+                    Not your style?{" "}
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline underline-offset-4"
+                      onClick={() => setStyleMode("custom")}
+                    >
+                      Try custom reference
+                    </button>
+                  </p>
+                ) : null}
+              </div>
+
+              {styleMode === "preset" ? (
+                <section className="space-y-3 border-t border-border/60 pt-4">
+                  <h2 className="text-sm font-semibold">Optional hair color</h2>
+                  <div className="grid max-h-[min(40vh,20rem)] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 [scrollbar-gutter:stable]">
                     <button
                       type="button"
                       onClick={() => setSelectedColor("")}
                       aria-pressed={selectedColor === ""}
                       className={cn(
-                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                        "flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors sm:min-h-10",
                         selectedColor === ""
                           ? "border-primary bg-primary/10 ring-1 ring-primary/30"
                           : "border-border bg-background hover:border-primary/40"
@@ -592,7 +848,7 @@ export function TryOnWorkspace() {
                           onClick={() => setSelectedColor(option.value)}
                           aria-pressed={isSelected}
                           className={cn(
-                            "flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                            "flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors sm:min-h-10",
                             isSelected
                               ? "border-primary bg-primary/10 ring-1 ring-primary/30"
                               : "border-border bg-background hover:border-primary/40"
@@ -614,16 +870,17 @@ export function TryOnWorkspace() {
                     })}
                   </div>
                 </section>
-              )}
+              ) : null}
 
-              <section className="space-y-3">
-                {/* Guest quota badge */}
-                {quota?.mode === "guest" && (
-                  <div className={`rounded-lg border px-3 py-2 text-sm ${
-                    quota.requiresAuth
-                      ? "border-destructive/40 bg-destructive/10 text-destructive"
-                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
-                  }`}>
+              <section className="mt-auto space-y-3 border-t border-border/60 pt-4">
+                {quota?.mode === "guest" ? (
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      quota.requiresAuth
+                        ? "border-destructive/40 bg-destructive/10 text-destructive"
+                        : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                    }`}
+                  >
                     {quota.requiresAuth ? (
                       <p className="flex items-center gap-2">
                         <AlertCircle className="size-4 shrink-0" />
@@ -637,7 +894,9 @@ export function TryOnWorkspace() {
                       </p>
                     ) : (
                       <p>
-                        <span className="font-medium">{quota.remaining} shared guest credit{quota.remaining === 1 ? "" : "s"} remaining.</span>{" "}
+                        <span className="font-medium">
+                          {quota.remaining} shared guest credit{quota.remaining === 1 ? "" : "s"} remaining.
+                        </span>{" "}
                         <Link href="/auth?next=/try-on" className="underline underline-offset-2">
                           Sign in
                         </Link>{" "}
@@ -645,12 +904,12 @@ export function TryOnWorkspace() {
                       </p>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 <Button
                   type="button"
                   size="lg"
-                  className="h-11 w-full gap-2"
+                  className="h-12 w-full min-h-12 gap-2 sm:h-11 sm:min-h-11"
                   disabled={isGenerating || quota?.requiresAuth === true}
                   onClick={handleGenerate}
                 >
@@ -680,76 +939,76 @@ export function TryOnWorkspace() {
                     )}
                     <span>{getReadableStatus(taskStatus)}</span>
                   </p>
-                  {taskId && (
+                  {taskId ? (
                     <p className="mt-1 text-xs text-muted-foreground">Task ID: {taskId}</p>
-                  )}
+                  ) : null}
                 </div>
 
-                {errorMessage && (
+                {errorMessage ? (
                   <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {errorMessage}
                   </p>
-                )}
+                ) : null}
               </section>
             </CardContent>
           </Card>
+        </div>
 
-          <Card className="border-border/70 bg-card/90">
-            <CardHeader>
-              <CardTitle className="text-2xl">Result Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Before</p>
-                  <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
-                    {targetPreview ? (
-                      <img
-                        src={targetPreview}
-                        alt="Uploaded target preview"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                        Upload your photo to preview it here.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">After</p>
-                  <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
-                    {resultUrl ? (
-                      <img
-                        src={resultUrl}
-                        alt="Generated hairstyle preview"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                        Generated result appears here.
-                      </div>
-                    )}
-                  </div>
+        <Card className="min-w-0 border-border/70 bg-card/90">
+          <CardHeader>
+            <CardTitle className="text-2xl">Result preview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
+                <p className="text-sm font-medium">Before</p>
+                <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
+                  {targetPreview ? (
+                    <img
+                      src={targetPreview}
+                      alt="Uploaded target preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                      Upload your photo to preview it here.
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {resultUrl && (
-                <a
-                  href={`${resultUrl}&download=1`}
-                  className={buttonVariants({
-                    size: "lg",
-                    className: "h-11 w-full gap-2",
-                  })}
-                >
-                  <Download className="size-4" />
-                  Download Result
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              <div className="min-w-0 space-y-2">
+                <p className="text-sm font-medium">After</p>
+                <div className="aspect-square overflow-hidden rounded-lg border border-border bg-secondary/40">
+                  {resultUrl ? (
+                    <img
+                      src={resultUrl}
+                      alt="Generated hairstyle preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                      Generated result appears here.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {resultUrl ? (
+              <a
+                href={`${resultUrl}&download=1`}
+                className={buttonVariants({
+                  size: "lg",
+                  className: "h-11 w-full gap-2",
+                })}
+              >
+                <Download className="size-4" />
+                Download Result
+              </a>
+            ) : null}
+          </CardContent>
+        </Card>
       </main>
     </div>
   )
