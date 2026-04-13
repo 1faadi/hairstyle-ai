@@ -27,6 +27,7 @@ import type {
 } from "@/lib/hairstyle/types"
 import { AILAB_PRESET_CATALOG } from "@/lib/hairstyle/ailab-presets"
 import { createBearerAuthHeaders } from "@/lib/hairstyle/auth-headers"
+import { CELEBRITY_PORTRAITS, type CelebrityRegion } from "@/lib/hairstyle/celebrities"
 import { getTaskPollDelayMs } from "@/lib/hairstyle/poll-delay"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { toast } from "sonner"
@@ -184,7 +185,7 @@ export function TryOnWorkspace() {
   const [presetsLoading, setPresetsLoading] = useState(true)
   const [presetsError, setPresetsError] = useState<string | null>(null)
 
-  const [styleMode, setStyleMode] = useState<"preset" | "custom">("preset")
+  const [styleMode, setStyleMode] = useState<"preset" | "custom" | "celebrity">("preset")
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
     LOCAL_PRESET_SHELLS[0]?.id ?? null
   )
@@ -202,6 +203,11 @@ export function TryOnWorkspace() {
   const [targetUploadError, setTargetUploadError] = useState<string | null>(null)
   const [customUploadError, setCustomUploadError] = useState<string | null>(null)
   const [isDraggingTarget, setIsDraggingTarget] = useState(false)
+  const [celebrityRegionFilter, setCelebrityRegionFilter] = useState<"all" | CelebrityRegion>("all")
+  const [selectedCelebrityReferenceId, setSelectedCelebrityReferenceId] = useState<string | null>(null)
+  const [celebrityReferenceFile, setCelebrityReferenceFile] = useState<File | null>(null)
+  const [celebrityReferencePreview, setCelebrityReferencePreview] = useState<string | null>(null)
+  const [loadingCelebrityId, setLoadingCelebrityId] = useState<string | null>(null)
 
   const pollTokenRef = useRef(0)
   const targetFileInputRef = useRef<HTMLInputElement>(null)
@@ -267,6 +273,11 @@ export function TryOnWorkspace() {
     }
   }, [filteredPresets, displayPresets, selectedPresetId])
 
+  const filteredCelebrityPortraits = useMemo(() => {
+    if (celebrityRegionFilter === "all") return [...CELEBRITY_PORTRAITS]
+    return CELEBRITY_PORTRAITS.filter((p) => p.region === celebrityRegionFilter)
+  }, [celebrityRegionFilter])
+
   function assignTargetFile(file: File | null): void {
     setTargetUploadError(null)
     if (!file) {
@@ -281,6 +292,38 @@ export function TryOnWorkspace() {
     }
     setTargetFile(file)
     setResultUrl(null)
+  }
+
+  async function applyCelebrityReference(portrait: (typeof CELEBRITY_PORTRAITS)[number]): Promise<void> {
+    setLoadingCelebrityId(portrait.id)
+    try {
+      const response = await fetch(portrait.imageSrc, { cache: "force-cache" })
+      if (!response.ok) {
+        throw new Error(`Could not load image (${response.status})`)
+      }
+      const blob = await response.blob()
+      const mime = blob.type === "image/png" || blob.type === "image/jpeg" ? blob.type : "image/jpeg"
+      const extension = mime === "image/png" ? "png" : "jpg"
+      const file = new File([blob], `${portrait.id}-reference.${extension}`, { type: mime })
+      const validationError = validateTargetImageFile(file)
+      if (validationError) {
+        toast.error("Couldn’t use this reference photo", {
+          description: validationError,
+          duration: 6000,
+        })
+        return
+      }
+      setSelectedCelebrityReferenceId(portrait.id)
+      setCelebrityReferenceFile(file)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Network error while loading portrait"
+      toast.error("Couldn’t load celebrity photo", {
+        description: message,
+        duration: 6000,
+      })
+    } finally {
+      setLoadingCelebrityId(null)
+    }
   }
 
   function assignCustomFile(file: File | null): void {
@@ -358,6 +401,15 @@ export function TryOnWorkspace() {
   }, [customSourceFile])
 
   useEffect(() => {
+    const preview = createObjectPreview(celebrityReferenceFile)
+    setCelebrityReferencePreview(preview)
+
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [celebrityReferenceFile])
+
+  useEffect(() => {
     return () => {
       pollTokenRef.current += 1
     }
@@ -414,6 +466,10 @@ export function TryOnWorkspace() {
       notifyGenerationError("Please upload a custom hairstyle reference image.")
       return
     }
+    if (styleMode === "celebrity" && !celebrityReferenceFile) {
+      notifyGenerationError("Please choose a celebrity hairstyle reference.")
+      return
+    }
 
     setIsGenerating(true)
     setResultUrl(null)
@@ -429,6 +485,8 @@ export function TryOnWorkspace() {
 
       if (styleMode === "custom" && customSourceFile) {
         formData.append("sourceImage", customSourceFile)
+      } else if (styleMode === "celebrity" && celebrityReferenceFile) {
+        formData.append("sourceImage", celebrityReferenceFile)
       } else if (selectedPreset) {
         formData.append("hairStyle", selectedPreset.hairStyle)
         formData.append("imageSize", "1")
@@ -509,9 +567,7 @@ export function TryOnWorkspace() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-6">
           <Card className="min-w-0 border-border/70 bg-card/90 lg:col-span-7">
             <CardHeader>
-              <CardTitle className="text-2xl">
-                {resultUrl ? "Your result" : "Upload your photo"}
-              </CardTitle>
+              <CardTitle className="text-2xl">{resultUrl ? "Your result" : "Upload your photo"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <input
@@ -522,6 +578,7 @@ export function TryOnWorkspace() {
                 className="sr-only"
                 onChange={(event) => assignTargetFile(event.target.files?.[0] ?? null)}
               />
+
               {!targetPreview ? (
                 <div
                   role="button"
@@ -576,7 +633,9 @@ export function TryOnWorkspace() {
                     </span>
                   </div>
                 </div>
-              ) : (
+              ) : null}
+
+              {targetPreview ? (
                 <>
                   <div
                     role="button"
@@ -641,7 +700,7 @@ export function TryOnWorkspace() {
                     </p>
                   )}
                 </>
-              )}
+              ) : null}
               {targetUploadError ? (
                 <p className="text-sm text-destructive" role="alert">
                   {targetUploadError}
@@ -654,7 +713,8 @@ export function TryOnWorkspace() {
             <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-2xl">Style &amp; generate</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Pick a preset or bring your own reference, then generate.
+                Upload your portrait on the left, then pick how we match the hairstyle: preset, your own
+                reference photo, or a celebrity look.
               </p>
             </CardHeader>
             <CardContent className="flex min-h-0 flex-1 flex-col gap-5">
@@ -667,7 +727,7 @@ export function TryOnWorkspace() {
                   type="button"
                   onClick={() => setStyleMode("preset")}
                   className={cn(
-                    "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
+                    "min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:min-h-10 sm:px-3",
                     styleMode === "preset"
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -679,13 +739,25 @@ export function TryOnWorkspace() {
                   type="button"
                   onClick={() => setStyleMode("custom")}
                   className={cn(
-                    "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
+                    "min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:min-h-10 sm:px-3",
                     styleMode === "custom"
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   Custom
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStyleMode("celebrity")}
+                  className={cn(
+                    "min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:min-h-10 sm:px-3",
+                    styleMode === "celebrity"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Celebrity
                 </button>
               </div>
 
@@ -892,6 +964,105 @@ export function TryOnWorkspace() {
                   </div>
                 ) : null}
 
+                {styleMode === "celebrity" ? (
+                  <div className="space-y-3 rounded-lg border border-border/70 bg-secondary/15 p-3">
+                    <p className="text-sm text-muted-foreground">
+                      Choose whose hairstyle to use as the reference for{" "}
+                      <span className="font-medium text-foreground">your uploaded photo</span>.
+                    </p>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Celebrity region">
+                      {(
+                        [
+                          ["all", "All"],
+                          ["hollywood", "Hollywood"],
+                          ["bollywood", "Bollywood"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setCelebrityRegionFilter(id)}
+                          className={cn(
+                            "min-h-10 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-9",
+                            celebrityRegionFilter === id
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Photos are from Wikimedia Commons (CC licenses). See{" "}
+                      <a
+                        href="/celebrities/ATTRIBUTION.md"
+                        className="font-medium text-primary underline underline-offset-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        ATTRIBUTION.md
+                      </a>
+                      .
+                    </p>
+                    <div className="max-h-[min(36vh,22rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {filteredCelebrityPortraits.map((portrait) => {
+                          const isActive =
+                            selectedCelebrityReferenceId === portrait.id && celebrityReferenceFile !== null
+                          const isLoading = loadingCelebrityId === portrait.id
+                          return (
+                            <button
+                              key={portrait.id}
+                              type="button"
+                              onClick={() => void applyCelebrityReference(portrait)}
+                              disabled={isLoading}
+                              aria-label={portrait.name}
+                              title={portrait.name}
+                              className={cn(
+                                "min-w-0 overflow-hidden rounded-lg border-2 border-white text-left shadow-sm transition-colors hover:opacity-95 disabled:opacity-60",
+                                isActive
+                                  ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                                  : "hover:border-white/90"
+                              )}
+                            >
+                              <div className="relative aspect-[3/4] w-full bg-secondary/35">
+                                <img
+                                  src={portrait.imageSrc}
+                                  alt={portrait.name}
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="h-full w-full object-cover"
+                                />
+                                {isLoading ? (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                                    <Loader2 className="size-6 animate-spin text-primary" />
+                                  </div>
+                                ) : null}
+                              </div>
+                              <span className="block truncate px-1.5 py-1 text-center text-[11px] font-medium text-foreground">
+                                {portrait.name}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    {celebrityReferencePreview ? (
+                      <div className="space-y-1 border-t border-border/60 pt-3">
+                        <p className="text-xs font-medium text-foreground">Selected reference</p>
+                        <img
+                          src={celebrityReferencePreview}
+                          alt="Selected celebrity hairstyle reference"
+                          loading="lazy"
+                          decoding="async"
+                          className="h-28 w-full rounded-lg border border-border object-cover"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {styleMode === "preset" ? (
                   <p className="text-center text-sm text-muted-foreground">
                     Not your style?{" "}
@@ -900,7 +1071,15 @@ export function TryOnWorkspace() {
                       className="font-medium text-primary underline underline-offset-4"
                       onClick={() => setStyleMode("custom")}
                     >
-                      Try custom reference
+                      Custom reference
+                    </button>{" "}
+                    or{" "}
+                    <button
+                      type="button"
+                      className="font-medium text-primary underline underline-offset-4"
+                      onClick={() => setStyleMode("celebrity")}
+                    >
+                      Celebrity look
                     </button>
                   </p>
                 ) : null}

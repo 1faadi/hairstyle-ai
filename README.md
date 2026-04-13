@@ -38,10 +38,17 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_PRESETS_FOLDER=hairstyle-ai/presets
 CLOUDINARY_UPLOADS_FOLDER=hairstyle-ai/uploads
+# Optional: upload folder for celebrity reference thumbnails (see npm run upload:celebrities)
+CLOUDINARY_CELEBRITIES_FOLDER=hairstyle-ai/celebrities
+# Client-side delivery URLs (set to match your Cloudinary cloud name and celebrities folder)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+NEXT_PUBLIC_CLOUDINARY_CELEBRITIES_FOLDER=hairstyle-ai/celebrities
 ```
 
 `CLOUDINARY_PRESETS_FOLDER` must point to the folder containing hairstyle reference images.
 `CLOUDINARY_UPLOADS_FOLDER` is used for temporary source/target uploads needed by VModel.
+
+**Celebrity try-on images:** Run `npm run upload:celebrities` once (with Cloudinary credentials in `.env.local`) to upload `public/celebrities/*` to Cloudinary. Then set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and `NEXT_PUBLIC_CLOUDINARY_CELEBRITIES_FOLDER` so the app loads those assets from `res.cloudinary.com`. If those public variables are omitted, the app falls back to local `/celebrities/` files.
 `GUEST_IP_HASH_SALT` should be a long random string (used to hash client IPs before storage).
 
 ## Supabase Migration
