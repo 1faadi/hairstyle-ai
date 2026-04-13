@@ -8,13 +8,13 @@ import {
   ArrowLeft,
   CheckCircle2,
   CloudUpload,
+  Download,
   Loader2,
   Upload,
   Wand2,
 } from "lucide-react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
-import { TryOnResultPreview } from "@/components/try-on/TryOnResultPreview"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -29,10 +29,20 @@ import { AILAB_PRESET_CATALOG } from "@/lib/hairstyle/ailab-presets"
 import { createBearerAuthHeaders } from "@/lib/hairstyle/auth-headers"
 import { getTaskPollDelayMs } from "@/lib/hairstyle/poll-delay"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
+import { toast } from "sonner"
 
 const TARGET_UPLOAD_INPUT_ID = "try-on-target-upload"
 
 const MAX_POLL_ATTEMPTS = 72
+
+const GENERATION_ERROR_TOAST_MS = 7000
+
+function notifyGenerationError(message: string): void {
+  toast.error("Couldn't generate hairstyle", {
+    description: message,
+    duration: GENERATION_ERROR_TOAST_MS,
+  })
+}
 
 const LOCAL_PRESET_SHELLS: HairstylePreset[] = AILAB_PRESET_CATALOG.map((item) => ({
   id: item.id,
@@ -187,7 +197,6 @@ export function TryOnWorkspace() {
   const [taskId, setTaskId] = useState<string | null>(null)
   const [taskStatus, setTaskStatus] = useState<HairstyleTaskStatus | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [resultUrl, setResultUrl] = useState<string | null>(null)
   const [presetCategory, setPresetCategory] = useState<PresetCategoryId>("all")
   const [targetUploadError, setTargetUploadError] = useState<string | null>(null)
@@ -262,6 +271,7 @@ export function TryOnWorkspace() {
     setTargetUploadError(null)
     if (!file) {
       setTargetFile(null)
+      setResultUrl(null)
       return
     }
     const err = validateTargetImageFile(file)
@@ -270,6 +280,7 @@ export function TryOnWorkspace() {
       return
     }
     setTargetFile(file)
+    setResultUrl(null)
   }
 
   function assignCustomFile(file: File | null): void {
@@ -373,12 +384,13 @@ export function TryOnWorkspace() {
 
       if (data.status === "succeeded" && data.resultPath) {
         setResultUrl(`${data.resultPath}?t=${Date.now()}`)
-        setErrorMessage(null)
         return
       }
 
       if (data.status === "failed" || data.status === "canceled") {
-        setErrorMessage(data.error || "Generation failed. Please try another style.")
+        notifyGenerationError(
+          data.error || "Generation failed. Please try another style."
+        )
         return
       }
 
@@ -390,21 +402,20 @@ export function TryOnWorkspace() {
 
   async function handleGenerate() {
     if (!targetFile) {
-      setErrorMessage("Please upload your photo first.")
+      notifyGenerationError("Please upload your photo first.")
       return
     }
 
     if (styleMode === "preset" && !selectedPreset) {
-      setErrorMessage("Please choose a hairstyle preset.")
+      notifyGenerationError("Please choose a hairstyle preset.")
       return
     }
     if (styleMode === "custom" && !customSourceFile) {
-      setErrorMessage("Please upload a custom hairstyle reference image.")
+      notifyGenerationError("Please upload a custom hairstyle reference image.")
       return
     }
 
     setIsGenerating(true)
-    setErrorMessage(null)
     setResultUrl(null)
     setTaskId(null)
     setTaskStatus("starting")
@@ -438,7 +449,7 @@ export function TryOnWorkspace() {
           requiresAuth?: boolean
         }
         if (body.requiresAuth) {
-          setErrorMessage(
+          notifyGenerationError(
             "You've used all 3 shared guest credits (AI Hair + AI Nail Art). Sign in for unlimited generations."
           )
           return
@@ -456,7 +467,7 @@ export function TryOnWorkspace() {
       if (pollTokenRef.current === token) {
         const message =
           error instanceof Error ? error.message : "Failed to generate hairstyle result"
-        setErrorMessage(message)
+        notifyGenerationError(message)
       }
     } finally {
       if (pollTokenRef.current === token) {
@@ -498,7 +509,9 @@ export function TryOnWorkspace() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-6">
           <Card className="min-w-0 border-border/70 bg-card/90 lg:col-span-7">
             <CardHeader>
-              <CardTitle className="text-2xl">Upload your photo</CardTitle>
+              <CardTitle className="text-2xl">
+                {resultUrl ? "Your result" : "Upload your photo"}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <input
@@ -509,67 +522,126 @@ export function TryOnWorkspace() {
                 className="sr-only"
                 onChange={(event) => assignTargetFile(event.target.files?.[0] ?? null)}
               />
-              <div
-                role="button"
-                tabIndex={0}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
+              {!targetPreview ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault()
+                      targetFileInputRef.current?.click()
+                    }
+                  }}
+                  onClick={() => targetFileInputRef.current?.click()}
+                  onDragOver={(event) => {
                     event.preventDefault()
-                    targetFileInputRef.current?.click()
-                  }
-                }}
-                onClick={() => targetFileInputRef.current?.click()}
-                onDragOver={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  setIsDraggingTarget(true)
-                }}
-                onDragLeave={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  setIsDraggingTarget(false)
-                }}
-                onDrop={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  setIsDraggingTarget(false)
-                  const file = event.dataTransfer.files?.[0]
-                  if (file) assignTargetFile(file)
-                }}
-                className={cn(
-                  "relative flex min-h-[min(50vh,22rem)] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed p-6 text-center transition-colors",
-                  isDraggingTarget
-                    ? "border-primary bg-primary/5"
-                    : "border-border/80 bg-secondary/15 hover:border-primary/40 hover:bg-secondary/25",
-                  targetPreview && "border-solid"
-                )}
-              >
-                {targetPreview ? (
-                  <>
-                    <img
-                      src={targetPreview}
-                      alt="Your uploaded portrait preview"
-                      className="absolute inset-0 h-full w-full object-cover opacity-35"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-background/70" />
-                  </>
-                ) : null}
-                <div className="relative z-10 flex max-w-sm flex-col items-center gap-3">
-                  <CloudUpload className="size-12 text-muted-foreground" aria-hidden />
-                  <p className="text-sm font-medium text-foreground">
-                    Drag and drop your photo here, or tap to browse
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Clear face, good lighting — JPG or PNG, max 5MB
-                  </p>
-                  <span
-                    className={buttonVariants({ size: "default", className: "pointer-events-none mt-1 gap-2" })}
-                  >
-                    <Upload className="size-4" />
-                    Upload
-                  </span>
+                    event.stopPropagation()
+                    setIsDraggingTarget(true)
+                  }}
+                  onDragLeave={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setIsDraggingTarget(false)
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setIsDraggingTarget(false)
+                    const file = event.dataTransfer.files?.[0]
+                    if (file) assignTargetFile(file)
+                  }}
+                  className={cn(
+                    "relative flex min-h-[min(50vh,22rem)] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+                    isDraggingTarget
+                      ? "border-primary bg-primary/5"
+                      : "border-border/80 bg-secondary/15 hover:border-primary/40 hover:bg-secondary/25"
+                  )}
+                >
+                  <div className="relative z-10 flex max-w-sm flex-col items-center gap-3">
+                    <CloudUpload className="size-12 text-muted-foreground" aria-hidden />
+                    <p className="text-sm font-medium text-foreground">
+                      Drag and drop your photo here, or tap to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Clear face, good lighting — JPG or PNG, max 5MB
+                    </p>
+                    <span
+                      className={buttonVariants({
+                        size: "default",
+                        className: "pointer-events-none mt-1 gap-2",
+                      })}
+                    >
+                      <Upload className="size-4" />
+                      Upload
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        targetFileInputRef.current?.click()
+                      }
+                    }}
+                    onClick={() => targetFileInputRef.current?.click()}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setIsDraggingTarget(true)
+                    }}
+                    onDragLeave={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setIsDraggingTarget(false)
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setIsDraggingTarget(false)
+                      const file = event.dataTransfer.files?.[0]
+                      if (file) assignTargetFile(file)
+                    }}
+                    className={cn(
+                      "relative w-full cursor-pointer overflow-hidden rounded-xl border-2 transition-colors",
+                      isDraggingTarget
+                        ? "border-primary bg-primary/5"
+                        : "border-solid border-border/80 hover:border-primary/40"
+                    )}
+                  >
+                    <div className="aspect-square w-full overflow-hidden bg-secondary/40">
+                      <img
+                        src={resultUrl ?? targetPreview}
+                        alt={
+                          resultUrl
+                            ? "Generated hairstyle preview"
+                            : "Your uploaded portrait preview"
+                        }
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  {resultUrl ? (
+                    <a
+                      href={`${resultUrl}&download=1`}
+                      className={buttonVariants({
+                        size: "lg",
+                        className: "h-11 w-full gap-2",
+                      })}
+                    >
+                      <Download className="size-4" />
+                      Download Result
+                    </a>
+                  ) : (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Tap or drop another photo to replace
+                    </p>
+                  )}
+                </>
+              )}
               {targetUploadError ? (
                 <p className="text-sm text-destructive" role="alert">
                   {targetUploadError}
@@ -704,7 +776,7 @@ export function TryOnWorkspace() {
                 ) : null}
                 {styleMode === "preset" && filteredPresets.length > 0 && displayPresets.length > 0 ? (
                   <div className="max-h-[min(50vh,28rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {displayPresets.map((preset) => {
                         const isActive = preset.id === selectedPresetId
                         const hasThumbnail =
@@ -718,14 +790,15 @@ export function TryOnWorkspace() {
                             key={preset.id}
                             type="button"
                             onClick={() => setSelectedPresetId(preset.id)}
+                            aria-label={preset.name}
                             className={cn(
-                              "min-w-0 overflow-hidden rounded-lg border text-left transition-colors",
+                              "min-w-0 overflow-hidden rounded-lg border-2 border-white text-left shadow-sm transition-colors hover:opacity-95",
                               isActive
-                                ? "border-primary ring-2 ring-primary/30"
-                                : "border-border hover:border-primary/40"
+                                ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                                : "hover:border-white/90"
                             )}
                           >
-                            <div className="relative h-24 w-full bg-secondary/35">
+                            <div className="relative aspect-[3/4] w-full bg-secondary/35">
                               {hasThumbnail ? (
                                 <img
                                   src={preset.thumbnailUrl as string}
@@ -733,7 +806,7 @@ export function TryOnWorkspace() {
                                   loading="lazy"
                                   decoding="async"
                                   className={cn(
-                                    "h-24 w-full object-cover transition-opacity duration-200",
+                                    "h-full w-full object-contain transition-opacity duration-200",
                                     isThumbnailLoaded ? "opacity-100" : "opacity-0"
                                   )}
                                   onLoad={() =>
@@ -754,7 +827,7 @@ export function TryOnWorkspace() {
                                   }
                                 />
                               ) : (
-                                <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
+                                <div className="absolute inset-0 flex items-center justify-center text-[11px] text-muted-foreground">
                                   {presetsLoading ? "Loading..." : "No preview"}
                                 </div>
                               )}
@@ -764,7 +837,6 @@ export function TryOnWorkspace() {
                                 </div>
                               ) : null}
                             </div>
-                            <div className="px-2 py-1.5 text-xs font-medium">{preset.name}</div>
                           </button>
                         )
                       })}
@@ -957,18 +1029,10 @@ export function TryOnWorkspace() {
                     <p className="mt-1 text-xs text-muted-foreground">Task ID: {taskId}</p>
                   ) : null}
                 </div>
-
-                {errorMessage ? (
-                  <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {errorMessage}
-                  </p>
-                ) : null}
               </section>
             </CardContent>
           </Card>
         </div>
-
-        <TryOnResultPreview targetPreview={targetPreview} resultUrl={resultUrl} />
       </main>
     </div>
   )

@@ -77,7 +77,7 @@ export async function listCloudinaryPresets(
       secure: true,
       version: resource.version,
       transformation: [
-        { width: 500, height: 500, crop: "fill", gravity: "auto" },
+        { width: 500, height: 500, crop: "limit" },
         { quality: "auto", fetch_format: "auto" },
       ],
     }),

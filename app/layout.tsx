@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import { AuthGreetingCard } from "@/components/shared/AuthGreetingCard"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { SITE_LOGO_PATH } from "@/lib/site"
 import "./globals.css"
 
@@ -65,6 +66,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <AuthGreetingCard />
           </Suspense>
+          <Toaster />
           {children}
         </ThemeProvider>
       </body>
