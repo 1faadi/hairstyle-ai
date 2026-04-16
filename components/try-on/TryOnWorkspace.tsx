@@ -848,7 +848,7 @@ export function TryOnWorkspace() {
                 ) : null}
                 {styleMode === "preset" && filteredPresets.length > 0 && displayPresets.length > 0 ? (
                   <div className="max-h-[min(50vh,28rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                       {displayPresets.map((preset) => {
                         const isActive = preset.id === selectedPresetId
                         const hasThumbnail =
@@ -878,7 +878,7 @@ export function TryOnWorkspace() {
                                   loading="lazy"
                                   decoding="async"
                                   className={cn(
-                                    "h-full w-full object-contain transition-opacity duration-200",
+                                    "h-full w-full object-cover transition-opacity duration-200",
                                     isThumbnailLoaded ? "opacity-100" : "opacity-0"
                                   )}
                                   onLoad={() =>
@@ -1006,7 +1006,7 @@ export function TryOnWorkspace() {
                       .
                     </p>
                     <div className="max-h-[min(36vh,22rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                         {filteredCelebrityPortraits.map((portrait) => {
                           const isActive =
                             selectedCelebrityReferenceId === portrait.id && celebrityReferenceFile !== null
