@@ -2,11 +2,12 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
+  CircleDollarSign,
   CloudUpload,
   Download,
   Loader2,
@@ -171,6 +172,47 @@ function validateTargetImageFile(file: File): string | null {
     return "Image must be 5MB or smaller."
   }
   return null
+}
+
+type CreditPillProps = {
+  quota: QuotaSnapshot | null
+}
+
+function CreditPill({ quota }: CreditPillProps): ReactElement {
+  const displayText =
+    quota === null
+      ? "--/3"
+      : quota.mode === "user"
+        ? "∞"
+        : `${quota.remaining ?? "--"}/3`
+
+  const label =
+    quota === null
+      ? "Loading shared guest credits for AI Hair and AI Nail Art."
+      : quota.mode === "user"
+        ? "Unlimited credits when signed in."
+        : typeof quota.remaining === "number"
+          ? `Shared guest credits for AI Hair and AI Nail Art, ${quota.remaining} of 3 remaining.`
+          : "Shared guest credits for AI Hair and AI Nail Art."
+
+  return (
+    <div
+      role="status"
+      aria-label={label}
+      title={label}
+      className="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-100/90 px-3 py-1.5 dark:border-blue-800/60 dark:bg-blue-950/50"
+    >
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white dark:bg-sky-500"
+        aria-hidden
+      >
+        <CircleDollarSign className="size-4" strokeWidth={2.25} />
+      </span>
+      <span className="text-base font-semibold tabular-nums text-blue-900 dark:text-blue-100">
+        {displayText}
+      </span>
+    </div>
+  )
 }
 
 export function TryOnWorkspace() {
@@ -537,7 +579,7 @@ export function TryOnWorkspace() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/10 to-background">
       <main className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/"
@@ -553,14 +595,8 @@ export function TryOnWorkspace() {
             <ThemeToggle />
           </div>
 
-          <div className="min-w-0 text-right">
-            <p className="text-xs text-muted-foreground">JPG, PNG up to 5MB</p>
-            <p className="text-xs font-medium text-foreground">
-              {quota?.mode === "user"
-                ? "Credits: Unlimited"
-                : `Free credits left (shared): ${quota?.remaining ?? "--"}/3`}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Shared across AI Hair + AI Nail Art</p>
+          <div className="flex min-w-0 shrink-0 items-center justify-end">
+            <CreditPill quota={quota} />
           </div>
         </div>
 
