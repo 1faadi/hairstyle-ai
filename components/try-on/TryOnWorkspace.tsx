@@ -577,8 +577,28 @@ export function TryOnWorkspace() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-secondary/10 to-background">
-      <main className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-background via-secondary/10 to-background">
+      <div className="try-on-ambient-layer" aria-hidden>
+        <div
+          className="try-on-ambient-blob bg-primary/25 dark:bg-primary/20"
+          style={{
+            top: "-15%",
+            left: "5%",
+            width: "min(42rem, 90vw)",
+            height: "min(36rem, 55vh)",
+          }}
+        />
+        <div
+          className="try-on-ambient-blob try-on-ambient-blob--b bg-accent/20 dark:bg-accent/15"
+          style={{
+            bottom: "-10%",
+            right: "0%",
+            width: "min(38rem, 85vw)",
+            height: "min(32rem, 50vh)",
+          }}
+        />
+      </div>
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -883,8 +903,9 @@ export function TryOnWorkspace() {
                   </p>
                 ) : null}
                 {styleMode === "preset" && filteredPresets.length > 0 && displayPresets.length > 0 ? (
-                  <div className="max-h-[min(50vh,28rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  <div className="try-on-thumb-scroll">
+                    <div className="try-on-thumb-scroll-inner">
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                       {displayPresets.map((preset) => {
                         const isActive = preset.id === selectedPresetId
                         const hasThumbnail =
@@ -948,6 +969,7 @@ export function TryOnWorkspace() {
                           </button>
                         )
                       })}
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -1041,8 +1063,9 @@ export function TryOnWorkspace() {
                       </a>
                       .
                     </p>
-                    <div className="max-h-[min(36vh,22rem)] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    <div className="try-on-thumb-scroll">
+                      <div className="try-on-celeb-thumb-scroll-inner">
+                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                         {filteredCelebrityPortraits.map((portrait) => {
                           const isActive =
                             selectedCelebrityReferenceId === portrait.id && celebrityReferenceFile !== null
@@ -1082,6 +1105,7 @@ export function TryOnWorkspace() {
                             </button>
                           )
                         })}
+                        </div>
                       </div>
                     </div>
                     {celebrityReferencePreview ? (
