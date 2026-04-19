@@ -8,13 +8,13 @@ import {
   ArrowLeft,
   CheckCircle2,
   Download,
-  Loader2,
   Sparkles,
   Upload,
 } from "lucide-react"
 
 import { CreditPill } from "@/components/credit-pill"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LoadingIndicator } from "@/components/ui/loading-indicator"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { HairstyleTaskStatus } from "@/lib/hairstyle/constants"
@@ -381,8 +381,8 @@ export function NailArtWorkspace() {
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Generating...
+                      <LoadingIndicator size="sm" label="Generating nail art" />
+                      Generating…
                     </>
                   ) : (
                     <>
@@ -399,7 +399,7 @@ export function NailArtWorkspace() {
                     ) : taskStatus === "failed" || taskStatus === "canceled" ? (
                       <AlertCircle className="size-4 text-destructive" />
                     ) : isGenerating ? (
-                      <Loader2 className="size-4 animate-spin text-primary" />
+                      <LoadingIndicator size="sm" label="Generation in progress" />
                     ) : (
                       <Upload className="size-4 text-muted-foreground" />
                     )}

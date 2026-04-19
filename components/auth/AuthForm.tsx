@@ -10,7 +10,6 @@ import {
   Eye,
   EyeOff,
   Lock,
-  Loader2,
   Mail,
   Sparkles,
   User,
@@ -18,6 +17,7 @@ import {
 
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { LoadingIndicator } from "@/components/ui/loading-indicator"
 import { SITE_LOGO_PATH, SITE_SHORT_NAME } from "@/lib/site"
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser"
 import { cn } from "@/lib/utils"
@@ -401,7 +401,10 @@ export function AuthForm() {
               <Button type="submit" className="h-11 w-full" disabled={isSubmitting || !supabase}>
                 {isSubmitting ? (
                   <span className="inline-flex items-center justify-center gap-2">
-                    <Loader2 size={16} className="animate-spin" />
+                    <LoadingIndicator
+                      size="sm"
+                      label={mode === "signin" ? "Signing you in" : "Creating your account"}
+                    />
                     {mode === "signin" ? "Signing you in…" : "Creating your account…"}
                   </span>
                 ) : mode === "signin" ? (

@@ -2,20 +2,21 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
   CloudUpload,
   Download,
-  Loader2,
   Upload,
   Wand2,
 } from "lucide-react"
 
 import { CreditPill } from "@/components/credit-pill"
+import { GenerationSparkleOverlay } from "@/components/try-on/GenerationSparkleOverlay"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LoadingIndicator } from "@/components/ui/loading-indicator"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -133,9 +134,75 @@ function getReadableStatus(status: HairstyleTaskStatus | null): string {
   }
 }
 
+const GENERATION_STATUS_ROTATION = [
+  "Applying selected style…",
+  "Blending your look…",
+  "Polishing the details…",
+  "Working our magic…",
+  "Almost there…",
+] as const
+
+type AnimatedGenerationStatusProps = {
+  taskStatus: HairstyleTaskStatus | null
+  isGenerating: boolean
+}
+
+function AnimatedGenerationStatus({
+  taskStatus,
+  isGenerating,
+}: AnimatedGenerationStatusProps): ReactElement {
+  const [rotateIndex, setRotateIndex] = useState(0)
+
+  useEffect(() => {
+    if (!isGenerating) return
+    const id = window.setInterval(() => {
+      setRotateIndex((i) => (i + 1) % GENERATION_STATUS_ROTATION.length)
+    }, 2400)
+    return () => window.clearInterval(id)
+  }, [isGenerating])
+
+  useEffect(() => {
+    if (isGenerating) setRotateIndex(0)
+  }, [isGenerating])
+
+  if (isGenerating) {
+    return (
+      <span
+        key={rotateIndex}
+        className="generation-status-text-appear inline-block min-h-[1.35rem] text-foreground"
+      >
+        {GENERATION_STATUS_ROTATION[rotateIndex]}
+      </span>
+    )
+  }
+
+  return (
+    <span key={String(taskStatus)} className="generation-status-text-appear inline-block text-foreground">
+      {getReadableStatus(taskStatus)}
+    </span>
+  )
+}
+
 const PRESET_CATEGORY_IDS = ["all", "short", "medium", "long", "curly", "straight"] as const
 
 type PresetCategoryId = (typeof PRESET_CATEGORY_IDS)[number]
+
+/** Segmented tabs (style source, gender): same emphasis as filter chips for a clear active state */
+const SEGMENT_TAB_SELECTED =
+  "border border-primary bg-primary/10 font-semibold text-foreground shadow-sm ring-1 ring-primary/30 dark:bg-primary/15"
+const SEGMENT_TAB_UNSELECTED =
+  "border border-transparent font-medium text-muted-foreground hover:bg-background/85 hover:text-foreground dark:hover:bg-background/35"
+
+const FILTER_CHIP_SELECTED =
+  "border-primary bg-primary/10 font-semibold text-foreground ring-1 ring-primary/30 dark:bg-primary/15"
+const FILTER_CHIP_UNSELECTED =
+  "border-border bg-background font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground"
+
+/** Preset/celebrity thumbnail tiles: flush border (no ring-offset gap) */
+const STYLE_THUMB_BASE =
+  "min-w-0 overflow-hidden rounded-lg text-left shadow-sm outline-none transition-[border-color,box-shadow,opacity] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+const STYLE_THUMB_SELECTED = "border-2 border-primary shadow-md shadow-primary/25"
+const STYLE_THUMB_DEFAULT = "border border-border/55 hover:border-primary/45"
 
 /** Client-side UX filter only — matches preset names / API style keys to category chips. */
 function presetMatchesCategory(preset: HairstylePreset, category: PresetCategoryId): boolean {
@@ -196,7 +263,6 @@ export function TryOnWorkspace() {
   const [targetFile, setTargetFile] = useState<File | null>(null)
   const [targetPreview, setTargetPreview] = useState<string | null>(null)
 
-  const [taskId, setTaskId] = useState<string | null>(null)
   const [taskStatus, setTaskStatus] = useState<HairstyleTaskStatus | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultUrl, setResultUrl] = useState<string | null>(null)
@@ -474,7 +540,6 @@ export function TryOnWorkspace() {
 
     setIsGenerating(true)
     setResultUrl(null)
-    setTaskId(null)
     setTaskStatus("starting")
 
     pollTokenRef.current += 1
@@ -518,7 +583,6 @@ export function TryOnWorkspace() {
 
       const data = (await response.json()) as TaskResponse
       setQuota(data.quota)
-      setTaskId(data.taskId)
       setTaskStatus(data.status)
 
       await pollTaskStatus(data.taskId, token)
@@ -686,7 +750,10 @@ export function TryOnWorkspace() {
                         : "border-solid border-border/80 hover:border-primary/40"
                     )}
                   >
-                    <div className="aspect-square w-full overflow-hidden bg-secondary/40">
+                    <div
+                      className="relative aspect-square w-full overflow-hidden bg-secondary/40"
+                      aria-busy={isGenerating && !resultUrl}
+                    >
                       <img
                         src={resultUrl ?? targetPreview}
                         alt={
@@ -696,6 +763,7 @@ export function TryOnWorkspace() {
                         }
                         className="h-full w-full object-cover"
                       />
+                      {isGenerating && !resultUrl ? <GenerationSparkleOverlay /> : null}
                     </div>
                   </div>
                   {resultUrl ? (
@@ -741,11 +809,10 @@ export function TryOnWorkspace() {
                 <button
                   type="button"
                   onClick={() => setStyleMode("preset")}
+                  aria-pressed={styleMode === "preset"}
                   className={cn(
-                    "min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:min-h-10 sm:px-3",
-                    styleMode === "preset"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                    "min-h-11 min-w-0 flex-1 rounded-md border px-2 py-2 text-sm transition-colors sm:min-h-10 sm:px-3",
+                    styleMode === "preset" ? SEGMENT_TAB_SELECTED : SEGMENT_TAB_UNSELECTED
                   )}
                 >
                   Preset
@@ -753,11 +820,10 @@ export function TryOnWorkspace() {
                 <button
                   type="button"
                   onClick={() => setStyleMode("custom")}
+                  aria-pressed={styleMode === "custom"}
                   className={cn(
-                    "min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:min-h-10 sm:px-3",
-                    styleMode === "custom"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                    "min-h-11 min-w-0 flex-1 rounded-md border px-2 py-2 text-sm transition-colors sm:min-h-10 sm:px-3",
+                    styleMode === "custom" ? SEGMENT_TAB_SELECTED : SEGMENT_TAB_UNSELECTED
                   )}
                 >
                   Custom
@@ -765,11 +831,10 @@ export function TryOnWorkspace() {
                 <button
                   type="button"
                   onClick={() => setStyleMode("celebrity")}
+                  aria-pressed={styleMode === "celebrity"}
                   className={cn(
-                    "min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors sm:min-h-10 sm:px-3",
-                    styleMode === "celebrity"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                    "min-h-11 min-w-0 flex-1 rounded-md border px-2 py-2 text-sm transition-colors sm:min-h-10 sm:px-3",
+                    styleMode === "celebrity" ? SEGMENT_TAB_SELECTED : SEGMENT_TAB_UNSELECTED
                   )}
                 >
                   Celebrity
@@ -777,7 +842,10 @@ export function TryOnWorkspace() {
               </div>
 
               {presetsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading presets...</p>
+                <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                  <LoadingIndicator size="sm" label="Loading style presets" />
+                  <span>Loading styles…</span>
+                </div>
               ) : null}
               {presetsError ? (
                 <p className="text-sm text-destructive">Could not load presets: {presetsError}</p>
@@ -792,11 +860,10 @@ export function TryOnWorkspace() {
                   <button
                     type="button"
                     onClick={() => setPresetGender("female")}
+                    aria-pressed={presetGender === "female"}
                     className={cn(
-                      "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
-                      presetGender === "female"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                      "min-h-11 flex-1 rounded-md border px-3 py-2 text-sm transition-colors sm:min-h-10",
+                      presetGender === "female" ? SEGMENT_TAB_SELECTED : SEGMENT_TAB_UNSELECTED
                     )}
                   >
                     Women
@@ -804,11 +871,10 @@ export function TryOnWorkspace() {
                   <button
                     type="button"
                     onClick={() => setPresetGender("male")}
+                    aria-pressed={presetGender === "male"}
                     className={cn(
-                      "min-h-11 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:min-h-10",
-                      presetGender === "male"
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                      "min-h-11 flex-1 rounded-md border px-3 py-2 text-sm transition-colors sm:min-h-10",
+                      presetGender === "male" ? SEGMENT_TAB_SELECTED : SEGMENT_TAB_UNSELECTED
                     )}
                   >
                     Men
@@ -829,11 +895,10 @@ export function TryOnWorkspace() {
                         type="button"
                         onClick={() => setPresetCategory(id)}
                         className={cn(
-                          "min-h-10 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-9",
-                          presetCategory === id
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          "min-h-10 rounded-full border px-3 py-1.5 text-xs transition-colors sm:min-h-9",
+                          presetCategory === id ? FILTER_CHIP_SELECTED : FILTER_CHIP_UNSELECTED
                         )}
+                        aria-pressed={presetCategory === id}
                       >
                         {label}
                       </button>
@@ -880,10 +945,8 @@ export function TryOnWorkspace() {
                             onClick={() => setSelectedPresetId(preset.id)}
                             aria-label={preset.name}
                             className={cn(
-                              "min-w-0 overflow-hidden rounded-lg border-2 border-white text-left shadow-sm transition-colors hover:opacity-95",
-                              isActive
-                                ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
-                                : "hover:border-white/90"
+                              STYLE_THUMB_BASE,
+                              isActive ? STYLE_THUMB_SELECTED : STYLE_THUMB_DEFAULT
                             )}
                           >
                             <div className="relative aspect-[3/4] w-full bg-secondary/35">
@@ -914,14 +977,18 @@ export function TryOnWorkspace() {
                                     })
                                   }
                                 />
+                              ) : presetsLoading ? (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <LoadingIndicator size="sm" label="Loading preset preview" />
+                                </div>
                               ) : (
                                 <div className="absolute inset-0 flex items-center justify-center text-[11px] text-muted-foreground">
-                                  {presetsLoading ? "Loading..." : "No preview"}
+                                  No preview
                                 </div>
                               )}
                               {showInlineLoader ? (
-                                <div className="absolute inset-0 flex items-center justify-center bg-background/45">
-                                  <Loader2 className="size-4 animate-spin text-primary" />
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/45 backdrop-blur-[1px]">
+                                  <LoadingIndicator size="sm" label="Loading thumbnail" />
                                 </div>
                               ) : null}
                             </div>
@@ -1000,11 +1067,10 @@ export function TryOnWorkspace() {
                           type="button"
                           onClick={() => setCelebrityRegionFilter(id)}
                           className={cn(
-                            "min-h-10 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-9",
-                            celebrityRegionFilter === id
-                              ? "border-primary bg-primary/10 text-foreground"
-                              : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                            "min-h-10 rounded-full border px-3 py-1.5 text-xs transition-colors sm:min-h-9",
+                            celebrityRegionFilter === id ? FILTER_CHIP_SELECTED : FILTER_CHIP_UNSELECTED
                           )}
+                          aria-pressed={celebrityRegionFilter === id}
                         >
                           {label}
                         </button>
@@ -1038,10 +1104,9 @@ export function TryOnWorkspace() {
                               aria-label={portrait.name}
                               title={portrait.name}
                               className={cn(
-                                "min-w-0 overflow-hidden rounded-lg border-2 border-white text-left shadow-sm transition-colors hover:opacity-95 disabled:opacity-60",
-                                isActive
-                                  ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
-                                  : "hover:border-white/90"
+                                STYLE_THUMB_BASE,
+                                "disabled:opacity-60",
+                                isActive ? STYLE_THUMB_SELECTED : STYLE_THUMB_DEFAULT
                               )}
                             >
                               <div className="relative aspect-[3/4] w-full bg-secondary/35">
@@ -1053,8 +1118,8 @@ export function TryOnWorkspace() {
                                   className="h-full w-full object-cover"
                                 />
                                 {isLoading ? (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-                                    <Loader2 className="size-6 animate-spin text-primary" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
+                                    <LoadingIndicator size="lg" label="Loading celebrity reference" />
                                   </div>
                                 ) : null}
                               </div>
@@ -1068,15 +1133,17 @@ export function TryOnWorkspace() {
                       </div>
                     </div>
                     {celebrityReferencePreview ? (
-                      <div className="space-y-1 border-t border-border/60 pt-3">
+                      <div className="space-y-2 border-t border-border/60 pt-3">
                         <p className="text-xs font-medium text-foreground">Selected reference</p>
-                        <img
-                          src={celebrityReferencePreview}
-                          alt="Selected celebrity hairstyle reference"
-                          loading="lazy"
-                          decoding="async"
-                          className="h-28 w-full rounded-lg border border-border object-cover"
-                        />
+                        <div className="overflow-hidden rounded-lg border border-border bg-secondary/25">
+                          <img
+                            src={celebrityReferencePreview}
+                            alt="Selected celebrity hairstyle reference"
+                            loading="lazy"
+                            decoding="async"
+                            className="mx-auto max-h-[min(55vh,28rem)] w-full object-contain object-center"
+                          />
+                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -1199,8 +1266,8 @@ export function TryOnWorkspace() {
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Generating...
+                      <LoadingIndicator size="sm" label="Generating hairstyle" />
+                      Generating…
                     </>
                   ) : (
                     <>
@@ -1217,15 +1284,12 @@ export function TryOnWorkspace() {
                     ) : taskStatus === "failed" || taskStatus === "canceled" ? (
                       <AlertCircle className="size-4 text-destructive" />
                     ) : isGenerating ? (
-                      <Loader2 className="size-4 animate-spin text-primary" />
+                      <LoadingIndicator size="sm" label="Generation in progress" />
                     ) : (
                       <Upload className="size-4 text-muted-foreground" />
                     )}
-                    <span>{getReadableStatus(taskStatus)}</span>
+                    <AnimatedGenerationStatus taskStatus={taskStatus} isGenerating={isGenerating} />
                   </p>
-                  {taskId ? (
-                    <p className="mt-1 text-xs text-muted-foreground">Task ID: {taskId}</p>
-                  ) : null}
                 </div>
               </section>
             </CardContent>
